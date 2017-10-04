@@ -248,7 +248,6 @@
 		edit_email.value = "";
 		edit_alamat.value = "";
 		edit_jabatan.value = "";
-		edit_porsi_bobot.value = "";
 		edit_user_status.value = 1;
         formtambahedit.action="<?php echo site_url();?>"+"admin/tambahuser";
 	}

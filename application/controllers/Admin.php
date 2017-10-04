@@ -801,7 +801,7 @@ class Admin extends CI_Controller {
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
 					foreach ($vcri as $key => $value) {
-						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri];
+						$bobot_global[$kcri][$key]=$value;
 					}
 				}
 				// echo '<pre>';
@@ -1121,6 +1121,7 @@ class Admin extends CI_Controller {
 		$data['page']='Perhitungan';
 		return $data;
 	}
+
 	public function pembobotangdss()
 	{
 		$data=[];
@@ -1339,7 +1340,7 @@ class Admin extends CI_Controller {
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
 					foreach ($vcri as $key => $value) {
-						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri];
+						$bobot_global[$kcri][$key]=$value;
 					}
 				}
 				// echo '<pre>';
@@ -1788,8 +1789,8 @@ class Admin extends CI_Controller {
 	}
 	public function tambahuser()
 	{
-		if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']))
-		{
+		// if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']))
+		// {
 			if($this->m_user->tambahuser($_POST))
 			{
 				$this->session->set_flashdata('msg',"Tambah User successed.");
@@ -1800,11 +1801,11 @@ class Admin extends CI_Controller {
 				$this->session->set_flashdata('error',"Tambah User failed.");
 				redirect("admin/usermanagement");
 			}
-		}else
-		{
-			$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
-			redirect("admin/usermanagement");
-		}
+		// }else
+		// {
+		// 	$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
+		// 	redirect("admin/usermanagement");
+		// }
 		
 	}
 	public function tambahdiskretisasi()
