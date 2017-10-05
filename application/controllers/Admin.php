@@ -801,12 +801,16 @@ class Admin extends CI_Controller {
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
 					foreach ($vcri as $key => $value) {
-						$bobot_global[$kcri][$key]=$value;
+						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri]; //inil
 					}
 				}
 				// echo '<pre>';
 				// print_r($bobot_dm);
 				// break 1;
+
+				// echo '<pre>';
+				// print_r($bobot_global);
+				// break 2;
 				$view['perhitungan']['ipa']['bobot_subcriteria'][$valueuser['id_user']]=$bobot_global;
 			}
 		}
@@ -823,6 +827,7 @@ class Admin extends CI_Controller {
 				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)-1));
 			}
 		}
+
 		$bobot_subcriteria_dm=[];
 		if (!isset($view['perhitungan']['ipa']['bobot_subcriteria'])) {
 			$view['perhitungan']['ipa']['bobot_subcriteria']=[];
@@ -1755,6 +1760,7 @@ class Admin extends CI_Controller {
 			$view_subcriteria_aturulang[$keyz]['konsistensi']['konsisten']=$konsistensi;
 			$tampung_bobot[$keyz]=$normalisasi;
 		}
+
 		// echo '<pre>';
 		// print_r($view_subcriteria_aturulang[1]['konsistensi']);
 		// break 1;
@@ -1767,6 +1773,9 @@ class Admin extends CI_Controller {
 		$data['view_subcriteria'] = $view_subcriteria_aturulang;
 		
 		$data['view_pembobotan'][2] = $tampung_bobot;
+		//echo '<pre>';
+		//print_r($data['view_pembobotan']);
+		//break 1;
 		// ////////////////////////////////////////////////////////////////////
 		// echo '<pre>';
 		// // print_r($view_criteria);
