@@ -702,6 +702,7 @@ class Admin extends CI_Controller {
 				$sum_nilai_akar_3=0;
 				$normalisasi=[];
 				foreach ($tbl_criteria as $key => $value) {
+					$normalisasi[$key]=0;
 					foreach ($value as $key1 => $va) {
 						$nil=0;
 						if(($va[1]=="") && ($va[2]==""))
@@ -743,6 +744,7 @@ class Admin extends CI_Controller {
 					
 				}
 				$bobotcriteria=$normalisasi;
+
 				$view['perhitungan']['ipa']['bobot_criteria'][$valueuser['id_user']]=$bobotcriteria;
 				//menghitung bobot sub
 				$bobotsubcriteria=[];
@@ -798,12 +800,22 @@ class Admin extends CI_Controller {
 				// print_r($bobotcriteria);
 				// print_r($bobotsubcriteria);
 				//menghitung DM
+				// print_r($bobotcriteria);
+				// print_r($bobotsubcriteria);
+				
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
 					foreach ($vcri as $key => $value) {
-						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri]; //inil
+						// if (!isset($bobotcriteria[$kcri])) {
+						// 	$bobotcriteria[$kcri]=0;
+						// }
+						// echo $bobotcriteria[$kcri].' x '.$value;
+						// echo '<br>';
+						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri];
+							
 					}
 				}
+				// break 1;
 				// echo '<pre>';
 				// print_r($bobot_dm);
 				// break 1;
@@ -824,7 +836,7 @@ class Admin extends CI_Controller {
 					$bobot_criteria_dm[$kcri]=0;
 				}
 				// $bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*$data_porsi[$kuser]/100);
-				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)-1));
+				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)));
 			}
 		}
 
@@ -839,7 +851,7 @@ class Admin extends CI_Controller {
 						$bobot_subcriteria_dm[$kcri][$ksubcri]=0;
 					}
 					// $bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*$data_porsi[$kuser]/100);
-					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*1/(sizeof($data_user)-1));
+					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*1/(sizeof($data_user)));
 				}
 			}
 		}
@@ -1359,13 +1371,14 @@ class Admin extends CI_Controller {
 			$view['perhitungan']['ipa']['bobot_criteria']=[];
 		}
 
+		$peembagi=1;
 		foreach ($view['perhitungan']['ipa']['bobot_criteria'] as $kuser => $peruser) {
 			foreach ($peruser as $kcri => $bob) {
 				if (!isset($bobot_criteria_dm[$kcri])) {
 					$bobot_criteria_dm[$kcri]=0;
 				}
 				//$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*$data_porsi[$kuser]/100);
-				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)-1));
+				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)));
 			}
 		}
 		$bobot_subcriteria_dm=[];
@@ -1379,7 +1392,7 @@ class Admin extends CI_Controller {
 						$bobot_subcriteria_dm[$kcri][$ksubcri]=0;
 					}
 					//$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*$data_porsi[$kuser]/100);
-					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*1/(sizeof($data_user)-1));
+					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*1/(sizeof($data_user)));
 				}
 			}
 		}
