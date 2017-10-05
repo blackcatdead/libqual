@@ -1345,7 +1345,7 @@ class Admin extends CI_Controller {
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
 					foreach ($vcri as $key => $value) {
-						$bobot_global[$kcri][$key]=$value;
+						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri];
 					}
 				}
 				// echo '<pre>';
