@@ -1952,8 +1952,8 @@ class Admin extends CI_Controller {
 		$data_user= $this->m_user->getuser($paruser);
 		// echo (($_POST['porsi_bobot'])-$data_user[0]['porsi_bobot']);
 		// break 1;
-		if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']-$data_user[0]['porsi_bobot']))
-		{
+		// if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']-$data_user[0]['porsi_bobot']))
+		// {
 			if($this->m_user->ubahuser($id_user,$_POST))
 			{
 				$this->session->set_flashdata('msg',"Edit User successed.");
@@ -1964,11 +1964,11 @@ class Admin extends CI_Controller {
 				$this->session->set_flashdata('error',"Edit User failed.");
 				redirect("admin/usermanagement");
 			}
-		}else
-		{
-			$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
-			redirect("admin/usermanagement");
-		}
+		// }else
+		// {
+		// 	$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
+		// 	redirect("admin/usermanagement");
+		// }
 	}
 	public function ubahsubcriteria($id_subcriteria)
 	{
