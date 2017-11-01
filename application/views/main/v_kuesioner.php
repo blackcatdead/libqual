@@ -59,13 +59,13 @@
 		              <td><?php echo $value['pertanyaan'] ?></td>
 		             
 				      <td>
-               <center><div id="p<?php echo $key ?>">0</div></center>
-				      	<input class ="ex11" name="persepsi[<?php echo $key ?>]" id="persepsi<?php echo $key ?>" type="text" data-slider-value="" value="" data-slider-tooltip="hide"/>
+               <center><div id="p<?php echo $value['id_subcriteria'] ?>">0</div></center>
+				      	<input class ="ex11" name="persepsi[<?php echo $value['id_subcriteria'] ?>]" id="persepsi<?php echo $value['id_subcriteria'] ?>" type="text" data-slider-value="" value="" data-slider-tooltip="hide"/>
                
 				      </td>
 				      <td>
-              <center><div id="k<?php echo $key ?>">0</div></center>
-				      	<input class ="ex11" name="kepentingan[<?php echo $key ?>]" id="kepentingan<?php echo $key ?>" type="text" data-slider-value="" value="" data-slider-tooltip="hide"/>
+              <center><div id="k<?php echo $value['id_subcriteria'] ?>">0</div></center>
+				      	<input class ="ex11" name="kepentingan[<?php echo $value['id_subcriteria'] ?>]" id="kepentingan<?php echo $value['id_subcriteria'] ?>" type="text" data-slider-value="" value="" data-slider-tooltip="hide"/>
                 
 				      </td>
 		            </tr>

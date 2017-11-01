@@ -11,6 +11,8 @@ class Admin extends CI_Controller {
 		$this->load->model('m_bobot','',TRUE);
 		$this->load->model('m_responden','',TRUE);
 		$this->load->model('m_diskretisasi','',TRUE);
+		$this->load->model('m_jawaban','',TRUE);
+
 	   	if($this->session->userdata('logged_in_admin'))
 	   	{
 	   		$session_data = $this->session->userdata('logged_in_admin');
@@ -50,9 +52,46 @@ class Admin extends CI_Controller {
 		$data_responden = $this->m_responden->getresponden($parresponden);
 		$parSubCri=[];
 		$data_subcrieria = $this->m_criteria->getsubcriteria($parSubCri);
+		$parJawaban=[];
+		$data_jawaban = $this->m_jawaban->getjawaban($parJawaban);
+
+		$jawaban2=[];
+		foreach ($data_responden as $key_r => $value) {
+			foreach ($data_subcrieria as $key_s => $value2) {
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][1]=null;
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][2]=null;
+			}
+		}
+		foreach ($data_jawaban as $key => $value) {
+			$jawaban2[$value['id_responden_fk']][$value['id_subcriteria_fk']][$value['tipe']]=$value['jawaban'];
+		}
+		// echo '<pre>';
+		// print_r($jawaban2);
+		// break 1 ;
+		foreach ($data_responden as $key => $value) {
+			
+			$answers_1='';
+			$answers_2='';
+			foreach ($jawaban2[$value['id_responden']] as $keysubc => $subc) {
+				$answers_1=$answers_1.$subc[1].',';
+				$answers_2=$answers_2.$subc[2].',';
+			}
+			$data_responden[$key]['answers_1']=$answers_1;
+			$data_responden[$key]['answers_2']=$answers_2;
+		}
+		// echo '<pre>';
+		// print_r($data_responden);
+		// break 1 ;
+
+
 		$data['page']='Responden';
 		$data['responden']=$data_responden;
 		$data['subcriteria']=$data_subcrieria;
+		$data['jawaban']=$data_jawaban;
+
+
+		
+
 		$this->load->view('admin/base_admin',$data);
 	}
 	public function diskretisasi()
@@ -594,7 +633,33 @@ class Admin extends CI_Controller {
 		$data_criteria = $this->m_criteria->getcriteria($parCri);
 		$parSubCri=[];
 		$data_subcriteria = $this->m_criteria->getsubcriteria($parSubCri);
-		
+		$data_jawaban = $this->m_jawaban->getjawaban([]);
+
+		$jawaban2=[];
+		foreach ($data_responden as $key_r => $value) {
+			foreach ($data_subcriteria as $key_s => $value2) {
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][1]=null;
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][2]=null;
+			}
+		}
+		foreach ($data_jawaban as $key => $value) {
+			$jawaban2[$value['id_responden_fk']][$value['id_subcriteria_fk']][$value['tipe']]=$value['jawaban'];
+		}
+		// echo '<pre>';
+		// print_r($jawaban2);
+		// break 1 ;
+		foreach ($data_responden as $key => $value) {
+			
+			$answers_1='';
+			$answers_2='';
+			foreach ($jawaban2[$value['id_responden']] as $keysubc => $subc) {
+				$answers_1=$answers_1.$subc[1].',';
+				$answers_2=$answers_2.$subc[2].',';
+			}
+			$data_responden[$key]['answers_1']=$answers_1;
+			$data_responden[$key]['answers_2']=$answers_2;
+		}
+
 		$paruser['role !='] = 1;
 		$data_user= $this->m_user->getuser($paruser);
 		// $data_porsi=[];
@@ -702,7 +767,7 @@ class Admin extends CI_Controller {
 				$sum_nilai_akar_3=0;
 				$normalisasi=[];
 				foreach ($tbl_criteria as $key => $value) {
-					$normalisasi[$key]=0;
+					
 					foreach ($value as $key1 => $va) {
 						$nil=0;
 						if(($va[1]=="") && ($va[2]==""))
@@ -1931,8 +1996,10 @@ class Admin extends CI_Controller {
 	}
 	public function hapusresponden($id_responden)
 	{
-		$par['id_responden']=$id_responden;
-		if($this->m_responden->hapusresponden($par))
+		// echo 'asdads';
+		// break 1;
+		// $par['id_responden']=$id_responden;
+		if($this->m_responden->hapusresponden_transc($id_responden))
 		{
 			$this->session->set_flashdata('msg',"Remove Responden successed.");
 			redirect("admin/responden");
@@ -2017,6 +2084,30 @@ class Admin extends CI_Controller {
 		{
 			$this->session->set_flashdata('error',"Remove Edit Bobot Kriteria failed.");
 			redirect("admin/pembobotan");
+		}
+	}
+
+	public function tonewtable()
+	{
+		$data_responden=$this->m_responden->getresponden([]);
+		foreach ($data_responden as $key => $value) {
+			
+			$jawaban1_exp=explode(',', $value['answers_1']);
+			$jawaban2_exp=explode(',', $value['answers_2']);
+			foreach ($jawaban1_exp as $key2 => $value2) {
+				$par_jawaban['id_responden_fk']=$value['id_responden'];
+				$par_jawaban['id_subcriteria_fk']=$key2+1;
+				$par_jawaban['tipe']=1;
+				$par_jawaban['jawaban']=$value2;
+				$this->m_jawaban->tambahjawaban($par_jawaban);
+			}
+			foreach ($jawaban2_exp as $key2 => $value2) {
+				$par_jawaban['id_responden_fk']=$value['id_responden'];
+				$par_jawaban['id_subcriteria_fk']=$key2+1;
+				$par_jawaban['tipe']=2;
+				$par_jawaban['jawaban']=$value2;
+				$this->m_jawaban->tambahjawaban($par_jawaban);
+			}
 		}
 	}
 }

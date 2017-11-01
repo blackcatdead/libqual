@@ -150,27 +150,27 @@
         });
 
         <?php foreach ($q as $key => $value): ?>
-          $("#persepsi<?php echo $key ?>").on("slide", function(slideEvt) {
+          $("#persepsi<?php echo $value['id_subcriteria'] ?>").on("slide", function(slideEvt) {
             // $("#ex6SliderVal").text(slideEvt.value);
             if (slideEvt.value >0.5) 
             {
-               $("#p<?php echo $key ?>").text(slideEvt.value);
+               $("#p<?php echo $value['id_subcriteria'] ?>").text(slideEvt.value);
             }else
             {
-              $("#p<?php echo $key ?>").text('0');
+              $("#p<?php echo $value['id_subcriteria'] ?>").text('0');
             }
            
             //alert(slideEvt.value);
           });
 
-          $("#kepentingan<?php echo $key ?>").on("slide", function(slideEvt) {
+          $("#kepentingan<?php echo $value['id_subcriteria'] ?>").on("slide", function(slideEvt) {
             // $("#ex6SliderVal").text(slideEvt.value);
             if (slideEvt.value >0.5) 
             {
-               $("#k<?php echo $key ?>").text(slideEvt.value);
+               $("#k<?php echo $value['id_subcriteria'] ?>").text(slideEvt.value);
             }else
             {
-              $("#k<?php echo $key ?>").text('0');
+              $("#k<?php echo $value['id_subcriteria'] ?>").text('0');
             }
 
            
