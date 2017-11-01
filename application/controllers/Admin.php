@@ -1,5 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+ini_set('max_execution_time', 0); 
+ini_set('memory_limit','2048M');
 class Admin extends CI_Controller {
 	function __construct()
 	{
@@ -743,15 +745,27 @@ class Admin extends CI_Controller {
 								$isi2=1;
 							}
 							else{
-								if (isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1])) {
-									$isi1=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1];
-									$isi2=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2];
+								if ((isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1]) && isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2])) || (isset($bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][2]) && isset($bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][1]))) {
+									
+									if (isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1])) {
+
+										$isi1=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1];
+										$isi2=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2];
+									}else
+									{
+										// echo $value2['id_criteria'].' - '.$value1['id_criteria'];
+										$isi1=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][2];
+										$isi2=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][1];
+									}
 								}else
 								{
-									// echo $value2['id_criteria'].' - '.$value1['id_criteria'];
-									$isi1=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][2];
-									$isi2=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][1];
+									echo '<script type="text/javascript">'.
+										'alert("Terjadi Kesalahan, Pastikan Bobot telah diisi.");'
+										.'window.open("'.site_url('admin').'","_self");'
+										.'</script>';
+									break 1;
 								}
+								
 								
 							}	
 							$tbl_subcriteria[$value1['id_criteria']][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1]=$isi1;	
