@@ -27,7 +27,6 @@ class Verifyloginadmin extends CI_Controller {
         	$this->session->unset_userdata('logged_in_admin');
         	$this->session->set_userdata('logged_in_admin', $sess_array);
 
-
         	redirect("admin");
 	    	return TRUE;
 	   	}

@@ -28,7 +28,22 @@
 
     function hapususer($par)
     {
-      return $this->db->delete('user', $par);
+      $this->load->model('m_bobot','',TRUE);
+
+      $this->db->trans_start();
+      $parbobot['id_user_fk']=$par['id_user'];
+      $this->m_bobot->hapusbobot($parbobot);
+      $this->db->delete('user', $par);
+      $this->db->trans_complete();
+
+      if ($this->db->trans_status() === FALSE)
+      {
+          return false;
+      }else
+      {
+        return true;
+      }
+
     }
 
     function tambahuser($par)

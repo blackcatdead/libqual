@@ -156,7 +156,7 @@
 				<?php endforeach ?>
 			</tr>
 		</table>
-		<h4 class="page-header">Olah Diskretisasi</h4>
+		<h4 class="page-header">Nilai Rerata (Persentase Label Diskretitasi)</h4>
 		<table class="table table-bordered">
 			<tr>
 				<th rowspan="2">Pernyataan</th>
@@ -186,8 +186,9 @@
 			<?php endforeach ?>
 		</table>
 		
-		<h4 class="page-header">Step 1</h4>
+<!-- 		<h4 class="page-header">Hitung Nilai BC1</h4> -->
 		<?php foreach ($view['perhitungan']['libq']['hitung1'] as $kc => $cri): ?>
+			<h4 class="page-header">Hitung Nilai BC <?php echo $kc ?></h4>
 			<table class="table table-bordered">
 				<tr>
 					<th></th>
@@ -212,7 +213,7 @@
 			</table>
 		<?php endforeach ?>
 
-		<h4 class="page-header">Step 2</h4>
+		<h4 class="page-header">Hitung Nilai B (Tingkat Kualitas Layanan)</h4>
 		<table class="table table-bordered">
 			<tr>
 				<th></th>

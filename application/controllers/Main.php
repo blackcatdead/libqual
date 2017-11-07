@@ -114,12 +114,6 @@ class Main extends CI_Controller {
 
 	public function submitkuesioner($tipe_q)
 	{
-		// echo '<pre>';
-		// print_r($_POST);
-		// echo '</pre>';
-		// break 1;
-
-		//validasi
 		$validasi = true;
 		foreach ($_POST['persepsi'] as $key => $value) {
 			if ($value <1 ) {
@@ -133,20 +127,7 @@ class Main extends CI_Controller {
 		}
 
 		if ($validasi) {
-			// $parresponden['id_responden']=$this->ses_id;
-			// $data_responden=$this->m_responden->getresponden($parresponden);
-
-			// $parresponden['answers_1']=$data_responden[0]['answers_1'];
-			// $parresponden['answers_2']=$data_responden[0]['answers_2'];
-			// $parresponden['responden_status']=$tipe_q+1;
-			// foreach ($_POST['persepsi'] as $key => $value) {
-			// 	$parresponden['answers_1']=$parresponden['answers_1'].$value.',';
-			// }
-			// foreach ($_POST['kepentingan'] as $key => $value) {
-			// 	$parresponden['answers_2']=$parresponden['answers_2'].$value.',';
-			// }
-
-
+			
 			if ($this->m_jawaban->tambah_jawaban_transc($this->ses_id,$_POST)) {
 				$sess_array = array(
 		    		'id' => $this->ses_id,
@@ -162,36 +143,12 @@ class Main extends CI_Controller {
 				$this->session->set_flashdata('error',"Gagal menyimpan.");
 				redirect("main/kuesioner");
 			}
-			// echo '<pre>';
-			// print_r($_POST);
-			// echo '</pre>';
-			// break 1;
-
-			// if ($this->m_responden->ubahresponden($this->ses_id,$parresponden)) {
-			// 	$sess_array = array(
-		 //    		'id' => $this->ses_id,
-		 //    		'nama' => $this->ses_nama,
-		 //    		'email' => $this->ses_email,
-		 //    		'no' => $this->ses_no,
-		 //    		'status' => $tipe_q+1
-		 //   		);
-		 //    	$this->session->set_userdata('logged_in', $sess_array);
-			// 	redirect('main/kuesioner');
-	 	// 	}else
-			// {
-			// 	$this->session->set_flashdata('error',"Gagal menyimpan.");
-			// 	redirect("main/kuesioner");
-			// }
-
-
-
-
+		
 		}else
 		{
 			$this->session->set_flashdata('error',"Mohon isikan semua jawaban Anda berdasarkan Persepsi dan Ekspektasi atas semua item pernyataan.");
 			redirect("main/kuesioner");
 		}
-
 
 	}
 }

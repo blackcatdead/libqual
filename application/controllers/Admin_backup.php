@@ -1,8 +1,8 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-
+ini_set('max_execution_time', 0); 
+ini_set('memory_limit','2048M');
 class Admin extends CI_Controller {
-
 	function __construct()
 	{
 		
@@ -12,7 +12,8 @@ class Admin extends CI_Controller {
 		$this->load->model('m_criteria','',TRUE);
 		$this->load->model('m_bobot','',TRUE);
 		$this->load->model('m_responden','',TRUE);
-		$this->load->model('m_diskritasi','',TRUE);
+		$this->load->model('m_diskretisasi','',TRUE);
+		$this->load->model('m_jawaban','',TRUE);
 	   	if($this->session->userdata('logged_in_admin'))
 	   	{
 	   		$session_data = $this->session->userdata('logged_in_admin');
@@ -26,21 +27,18 @@ class Admin extends CI_Controller {
 			redirect('loginadmin', 'refresh');
 		}
 	}
-
 	public function logout()
 	{
 		$this->session->unset_userdata('logged_in_admin');
 	   	session_destroy();
 		redirect('admin', 'refresh');	
 	}
-
 	public function index()
 	{
 		$data['page']='';
 		
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function usermanagement()
 	{
 		$paruser=[];
@@ -49,34 +47,57 @@ class Admin extends CI_Controller {
 		$data['users']=$data_user;
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function responden()
 	{
 		$parresponden=[];
 		$data_responden = $this->m_responden->getresponden($parresponden);
 		$parSubCri=[];
 		$data_subcrieria = $this->m_criteria->getsubcriteria($parSubCri);
+		$parJawaban=[];
+		$data_jawaban = $this->m_jawaban->getjawaban($parJawaban);
+		$jawaban2=[];
+		foreach ($data_responden as $key_r => $value) {
+			foreach ($data_subcrieria as $key_s => $value2) {
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][1]=null;
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][2]=null;
+			}
+		}
+		foreach ($data_jawaban as $key => $value) {
+			$jawaban2[$value['id_responden_fk']][$value['id_subcriteria_fk']][$value['tipe']]=$value['jawaban'];
+		}
+		
+		foreach ($data_responden as $key => $value) {
+			
+			$answers_1='';
+			$answers_2='';
+			foreach ($jawaban2[$value['id_responden']] as $keysubc => $subc) {
+				$answers_1=$answers_1.$subc[1].',';
+				$answers_2=$answers_2.$subc[2].',';
+			}
+			$data_responden[$key]['answers_1']=$answers_1;
+			$data_responden[$key]['answers_2']=$answers_2;
+		}
+		
 		$data['page']='Responden';
 		$data['responden']=$data_responden;
 		$data['subcriteria']=$data_subcrieria;
+		$data['jawaban']=$data_jawaban;
+		
 		$this->load->view('admin/base_admin',$data);
 	}
-
-	public function diskritasi()
+	public function diskretisasi()
 	{
-		$pardiskritasi=[];
-		$data_diskritasi = $this->m_diskritasi->getdiskritasi($pardiskritasi);
+		$pardiskretisasi=[];
+		$data_diskretisasi = $this->m_diskretisasi->getdiskretisasi($pardiskretisasi);
 		$data['page']='Diskretisasi';
-		$data['diskritasi']=$data_diskritasi;
+		$data['diskretisasi']=$data_diskretisasi;
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function report()
 	{
 		$data['page']='Report';
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function dl($tipedokumen)
 	{
 		if ($tipedokumen == 'excel') {
@@ -85,75 +106,111 @@ class Admin extends CI_Controller {
 			$this->reportpdf();
 		}
 	}
-
 	private function reportpdf()
 	{
 		$data=$this->dapatkandata();
 		$hasp=$this->perhitunganpisah();
-
-
 		$this->load->library('excel');
 		$this->excel->setActiveSheetIndex(0);
-
 		$sheet = $this->excel->getActiveSheet();
-
-		$data = array('20', '31', '50', '80', '105', '139', '180', 'k', '256', '308','359','405','449','491','516');
-		$row = 1;
-		foreach($data as $point) {
-		$sheet->setCellValueByColumnAndRow(1, $row++, $point);
-		}
-
-		$data = array('20', '31', '50', '80', '105', '139', '180', '219', '256', '308','359','405','449','491','516');
-		$row = 1;
-		foreach($data as $point) {
-		$sheet->setCellValueByColumnAndRow(0, $row++, $point);
-		}
-
-		$values = new PHPExcel_Chart_DataSeriesValues('Number', 'Worksheet!$B$1:$B$10');
-		$categories = new PHPExcel_Chart_DataSeriesValues('String', 'Worksheet!$A$1:$A$10');
-
+  		$sheet->fromArray(
+			array(
+				array('',	2010,	2011,	2012),
+				array('Q1',   12,   15,		21),
+				array('Q2',   56,   73,		86),
+				array('Q3',   52,   61,		69),
+				array('Q4',   30,   32,		0),
+			)
+		);
+		$dataseriesLabels1 = array(
+		new PHPExcel_Chart_DataSeriesValues('String', 'Worksheet!$C$1', NULL, 1), 
+		);
+		$xAxisTickValues1 = array(
+		new PHPExcel_Chart_DataSeriesValues('String','Worksheet!$A$2:$A$5', NULL, 4),  
+		);
+		$dataSeriesValues1 = array(
+		new PHPExcel_Chart_DataSeriesValues('Number', 'Worksheet!$C$2:$C$5', NULL, 4), 
+		);
 		$series = new PHPExcel_Chart_DataSeries(
-		PHPExcel_Chart_DataSeries::TYPE_AREACHART,       // plotType
-		PHPExcel_Chart_DataSeries::GROUPING_CLUSTERED,  // plotGrouping
-		array(0),                                       // plotOrder
-		array(),                                        // plotLabel
-		array($categories),                             // plotCategory
-		array($values)                                  // plotValues
+			PHPExcel_Chart_DataSeries::TYPE_PIECHART,       // plotType
+			PHPExcel_Chart_DataSeries::GROUPING_STANDARD,  // plotGrouping
+			range(0, count($dataSeriesValues1)-1),          // plotOrder
+			$dataseriesLabels1,                   // plotLabel
+			$xAxisTickValues1,                    // plotCategory
+			$dataSeriesValues1                    // plotValues
 		);
 		$series->setPlotDirection(PHPExcel_Chart_DataSeries::DIRECTION_VERTICAL);
-
 		$layout = new PHPExcel_Chart_Layout();
+		$layout->setShowVal(TRUE);
+		$layout->setShowPercent(TRUE);
 		$plotarea = new PHPExcel_Chart_PlotArea($layout, array($series));
 		$xTitle = new PHPExcel_Chart_Title('xAxisLabel');
 		$yTitle = new PHPExcel_Chart_Title('yAxisLabel');
-
-		$chart = new PHPExcel_Chart('sample', null, null, $plotarea, true,0,$xTitle,$yTitle);
-
-		$chart->setTopLeftPosition('C1');
-		$chart->setBottomRightPosition('J15');
-
+		$title1 = new PHPExcel_Chart_Title('Jenis Kelamin');
+		$legend1 = new PHPExcel_Chart_Legend(PHPExcel_Chart_Legend::POSITION_RIGHT, NULL, false);
+		$chart = new PHPExcel_Chart('sample', $title1, $legend1, $plotarea, true,0,NULL,NULL);
+		$chart->setTopLeftPosition('A7');
+		$chart->setBottomRightPosition('H20');
 		$sheet->addChart($chart);
-
-		
-		
-
+		$dataSeriesLabels2 = array(
+			new PHPExcel_Chart_DataSeriesValues('String', 'Worksheet!$C$1', NULL, 1),	//	2011
+		);
+		$xAxisTickValues2 = array(
+			new PHPExcel_Chart_DataSeriesValues('String', 'Worksheet!$A$2:$A$5', NULL, 4),	//	Q1 to Q4
+		);
+		$dataSeriesValues2 = array(
+			new PHPExcel_Chart_DataSeriesValues('Number', 'Worksheet!$C$2:$C$5', NULL, 4),
+		);
+		//	Build the dataseries
+		$series2 = new PHPExcel_Chart_DataSeries(
+			PHPExcel_Chart_DataSeries::TYPE_DONUTCHART,		// plotType
+			NULL,			                                // plotGrouping (Donut charts don't have any grouping)
+			range(0, count($dataSeriesValues2)-1),			// plotOrder
+			$dataSeriesLabels2,								// plotLabel
+			$xAxisTickValues2,								// plotCategory
+			$dataSeriesValues2								// plotValues
+		);
+		$series2->setPlotDirection(PHPExcel_Chart_DataSeries::DIRECTION_VERTICAL);
+		$layout2 = new PHPExcel_Chart_Layout();
+		$layout2->setShowVal(TRUE);
+		$layout2->setShowPercent(TRUE);
+		$plotarea = new PHPExcel_Chart_PlotArea($layout2, array($series2));
+		$xTitle = new PHPExcel_Chart_Title('xAxisLabel');
+		$yTitle = new PHPExcel_Chart_Title('yAxisLabel');
+		$title2 = new PHPExcel_Chart_Title('Tingkat Pendidikan');
+		$legend2 = new PHPExcel_Chart_Legend(PHPExcel_Chart_Legend::POSITION_RIGHT, NULL, false);
+		$chart2 = new PHPExcel_Chart('sample', $title2, $legend2, $plotarea, true,0,NULL,NULL);
+		//	Set the position where the chart should appear in the worksheet
+		$chart2->setTopLeftPosition('I7');
+		$chart2->setBottomRightPosition('P20');
+		//	Add the chart to the worksheet
+		$sheet->addChart($chart2);
 		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 		header('Content-Disposition: attachment;filename="graph.xlsx"');
 		header('Cache-Control: max-age=0');
 		
 		$writer = PHPExcel_IOFactory::createWriter($this->excel, 'Excel2007');
 		$writer->setIncludeCharts(TRUE);
-
 		$writer->save('php://output');
 	}
-
 	private function reportexcel()
 	{
 		$data=$this->dapatkandata();
 		$hasp=$this->perhitunganpisah();
-
+		$styleArray = array(
+	    'font'  => array(
+	        'size'  => 8,
+	        'name'  => 'Verdana'
+	    ));
 		$row=1;
 		$this->load->library('excel');
+		$borderArray = array(
+	      'borders' => array(
+	          'allborders' => array(
+	              'style' => PHPExcel_Style_Border::BORDER_THIN
+	          )
+	      )
+	  );
 		$this->excel->setActiveSheetIndex(0);
 		//name the worksheet
 		$this->excel->getActiveSheet()->setTitle('Report');
@@ -161,9 +218,10 @@ class Admin extends CI_Controller {
 		// $this->excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(20);
 		$this->excel->getActiveSheet()->getStyle('A1'.$row)->getFont()->setBold(true);
 		$row++;
-		$this->excel->getActiveSheet()->mergeCells('A'.$row.':I'.$row);
+		$this->excel->getActiveSheet()->mergeCells('A'.$row.':H'.$row);
 		$this->excel->getActiveSheet()->getStyle('A'.$row)->getAlignment()->setWrapText(true); 
 		$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(44);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->applyFromArray($styleArray);
 		$this->excel->getActiveSheet()->setCellValue('A'.$row, 'Pemustaka yang menjadi responden pada penelitian mengenai tingkat kualitas layanan Perpustakaan menggunakan metode GDSS-AHP ini berjumlah '.$data[0]['count'].' responden, dengan distribusi berdasarkan jenis kelamin dan tingkat pendidikan yaitu :');
 		$row++;
 		$row++;
@@ -193,91 +251,120 @@ class Admin extends CI_Controller {
 		$this->excel->getActiveSheet()->setCellValue('E'.$row, $data[0]['pendidikan_5']);
 		$this->excel->getActiveSheet()->setCellValue('F'.$row, $data[0]['pendidikan_6']);
 		$this->excel->getActiveSheet()->setCellValue('G'.$row, $data[0]['pendidikan_7']);
-
 		$row++;
 		$row++;
+		$row=$row+10;
 		$this->excel->getActiveSheet()->setCellValue('A'.$row, 'Hasil Penelitian');
 		$this->excel->getActiveSheet()->getStyle('A1'.$row)->getFont()->setBold(true);
 		$row++;
+		$this->excel->getActiveSheet()->mergeCells('A'.$row.':H'.$row);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->getAlignment()->setWrapText(true); 
+		$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(40);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->applyFromArray($styleArray);
 		$this->excel->getActiveSheet()->setCellValue('A'.$row, 'Berdasarkan hasil penelitian dengan menggunakan metode GDSS-AHP LibQual, maka diperoleh hasil penelitian sebagai berikut :');
 		$row++;
 		
-		$id_diskritasi_max=0;
+		$id_diskretisasi_max=0;
 		foreach ($hasp['view']['hasil']['libq']['prosentase'] as $key => $value) {
 			if($value == max($hasp['view']['hasil']['libq']['prosentase']))
 			{
-				$id_diskritasi_max=$key;
+				$id_diskretisasi_max=$key;
 			}
 		}
-
-		$this->excel->getActiveSheet()->setCellValue('A'.$row, '1. Tingkat kepuasan responden terhadap kualitas layanan perpustakaan yaitu pada tingkat '.$hasp['diskritasi3'][$id_diskritasi_max]['diskritasi_panjang'].' ('.$hasp['diskritasi3'][$id_diskritasi_max]['diskritasi'].')'.' dengan prosentase ('.round(max($hasp['view']['hasil']['libq']['prosentase']),5).'%), dengan rincian tingkat kepuasan sebagai berikut :');
+		$this->excel->getActiveSheet()->mergeCells('A'.$row.':H'.$row);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->getAlignment()->setWrapText(true); 
+		$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(40);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->applyFromArray($styleArray);
+		$this->excel->getActiveSheet()->setCellValue('A'.$row, '1. Tingkat kepuasan responden terhadap kualitas layanan perpustakaan yaitu pada tingkat '.$hasp['diskretisasi3'][$id_diskretisasi_max]['diskretisasi_panjang'].' ('.$hasp['diskretisasi3'][$id_diskretisasi_max]['diskretisasi'].')'.' dengan prosentase ('.round(max($hasp['view']['hasil']['libq']['prosentase']),5).'%), dengan rincian tingkat kepuasan sebagai berikut :');
 		$row++;
-
 		$alphabet='B';
-		foreach ($hasp['diskritasi'] as $key => $value) {
-			$this->excel->getActiveSheet()->setCellValue($alphabet.$row, $value['diskritasi_panjang'].' ('.$value['diskritasi'].')');
+		foreach ($hasp['diskretisasi'] as $key => $value) { 
+			$this->excel->getActiveSheet()->getDefaultColumnDimension()->setWidth(12);
+			$this->excel->getActiveSheet()->getStyle($alphabet.$row)->getAlignment()->setWrapText(true); 
+			$this->excel->getActiveSheet()->getStyle($alphabet.$row)->applyFromArray($styleArray);
+			$this->excel->getActiveSheet()->getStyle($alphabet.$row)->applyFromArray($borderArray);
+			$this->excel->getActiveSheet()->setCellValue($alphabet.$row, $value['diskretisasi_panjang'].' ('.$value['diskretisasi'].')');
 			$alphabet++;
 		}
 		$row++;
 		$alphabet='B';
 		foreach ($hasp['view']['hasil']['libq']['prosentase'] as $key => $value) {
+			$this->excel->getActiveSheet()->getDefaultColumnDimension()->setWidth(12);
+			$this->excel->getActiveSheet()->getStyle($alphabet.$row)->getAlignment()->setWrapText(true); 
+			$this->excel->getActiveSheet()->getStyle($alphabet.$row)->applyFromArray($styleArray);
+			$this->excel->getActiveSheet()->getStyle($alphabet.$row)->applyFromArray($borderArray);
 			$this->excel->getActiveSheet()->setCellValue($alphabet.$row, round($value,5).'%');
 			$alphabet++;
 		}
-
 		$row++;
 		$row++;
-		$this->excel->getActiveSheet()->setCellValue('A'.$row, '2. Nilai evaluasi tiap butir pernyataan yang dinyatakan dalam bentuk persepsi berbobot dan ekspektasi berbobot serta analisis A58kuadran IPA, sebagai berikut:');
+		$this->excel->getActiveSheet()->mergeCells('A'.$row.':H'.$row);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->getAlignment()->setWrapText(true); 
+		$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(40);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->applyFromArray($styleArray);
+		$this->excel->getActiveSheet()->setCellValue('A'.$row, '2. Nilai evaluasi tiap butir pernyataan yang dinyatakan dalam bentuk persepsi berbobot dan ekspektasi berbobot serta analisis kuadran IPA, sebagai berikut:');
 		$row++;
+		$this->excel->getActiveSheet()->getStyle('A'.$row.':D'.$row)->getAlignment()->setWrapText(true); 
+		$this->excel->getActiveSheet()->getStyle('A'.$row.':D'.$row)->applyFromArray($styleArray);
+		$this->excel->getActiveSheet()->getStyle('A'.$row.':D'.$row)->applyFromArray($borderArray);
 		$this->excel->getActiveSheet()->setCellValue('A'.$row, 'ID Pernyataan Kuesioner');
 		$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Persepsi Berbobot');
 		$this->excel->getActiveSheet()->setCellValue('C'.$row, 'Ekspektasi Berbobot');
 		$this->excel->getActiveSheet()->setCellValue('D'.$row, 'Kuadran');
 		$row++;
-
-		$tiapkuadran['1']=[];
-		$tiapkuadran['2']=[];
-		$tiapkuadran['3']=[];
-		$tiapkuadran['4']=[];
-		$tiapkuadran['5']=[];
+		$tiapkuadran[1]=[];
+		$tiapkuadran[2]=[];
+		$tiapkuadran[3]=[];
+		$tiapkuadran[4]=[];
+		$tiapkuadran[5]=[];
 		foreach ($hasp['view']['hasil']['ipa']['kuadran'] as $kc => $cri) {
 			foreach ($cri as $ksc => $sc) {
+				$this->excel->getActiveSheet()->getStyle('A'.$row.':D'.$row)->getAlignment()->setWrapText(true); 
+				$this->excel->getActiveSheet()->getStyle('A'.$row.':D'.$row)->applyFromArray($styleArray);
+				$this->excel->getActiveSheet()->getStyle('A'.$row.':D'.$row)->applyFromArray($borderArray);
 				$this->excel->getActiveSheet()->setCellValue('A'.$row, $ksc);
 				$this->excel->getActiveSheet()->setCellValue('B'.$row, $sc[1]);
 				$this->excel->getActiveSheet()->setCellValue('C'.$row, $sc[2]);
 				$this->excel->getActiveSheet()->setCellValue('D'.$row, 'Kuadran '.$sc['posisi']);
 				$row++;
-
-				switch ($sc['posisi']) {
-					case 'A':
-						$tiapkuadran['1'][]=$ksc;
-						break;
-					case 'B':
-						$tiapkuadran['2'][]=$ksc;
-						break;
-					case 'C':
-						$tiapkuadran['3'][]=$ksc;
-						break;
-					case 'D':
-						$tiapkuadran['4'][]=$ksc;
-						break;
-					default:
-						$tiapkuadran['5'][]=$ksc;
-						break;
-				}
+				// switch ($sc['posisi']) {
+				// 	case 'A':
+				// 		$tiapkuadran[1][]=$ksc;
+				// 		break;
+				// 	case 'B':
+				// 		$tiapkuadran[2][]=$ksc;
+				// 		break;
+				// 	case 'C':
+				// 		$tiapkuadran[3][]=$ksc;
+				// 		break;
+				// 	case 'D':
+				// 		$tiapkuadran[4][]=$ksc;
+				// 		break;
+				// 	default:
+				// 		$tiapkuadran[5][]=$ksc;
+				// 		break;
+				// }
+				$tiapkuadran[$sc['posisi']][]=$ksc;
 			}
 		}
-
 		$row++;
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->getFont()->setBold(true);
+		$this->excel->getActiveSheet()->setCellValue('A'.$row, 'Rekomendasi evaluasi layanan:');
 		$row++;
-		$this->excel->getActiveSheet()->setCellValue('A'.$row, '2. Rekomendasi evaluasi layanan:');
-		$row++;
+		$this->excel->getActiveSheet()->mergeCells('A'.$row.':H'.$row);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->getAlignment()->setWrapText(true); 
+		$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(40);
+		$this->excel->getActiveSheet()->getStyle('A'.$row)->applyFromArray($styleArray);
 		$this->excel->getActiveSheet()->setCellValue('A'.$row, 'Untuk meningkatkan kualitas layanan perpustakaan diharapkan pengelola perpustakaan melakukan hal-hal sebagai berikut:');
 		$row++;
 		$row++;
 		$num=1;
 		if (sizeof($tiapkuadran[1]) > 0) {
 			$this->excel->getActiveSheet()->setCellValue('A'.$row, $num);
+			$this->excel->getActiveSheet()->mergeCells('B'.$row.':H'.$row);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->getAlignment()->setWrapText(true); 
+			$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(50);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->applyFromArray($styleArray);
 			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Memberikan perhatian khusus (prioritas) terhadap item pernyataan dalam Kuadran 1 (concentrate here), dimana pada kuadran ini item evaluasi dianggap penting oleh pelanggan, tetapi pada kenyataannya item ini belum sesuai dengan harapan pelanggan (tingkat kepuasan yang diperoleh masih rendah). Item evaluasi yang harus diperhatikan/diprioritaskan adalah sebagai berikut : ');
 			$row++;
 			foreach ($tiapkuadran[1] as $key => $value) {
@@ -287,10 +374,13 @@ class Admin extends CI_Controller {
 			$num++;
 			$row++;
 		}
-
 		if (sizeof($tiapkuadran[2]) > 0) {
 			$this->excel->getActiveSheet()->setCellValue('A'.$row, $num);
-			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Memberikan perhatian khusus (prioritas) terhadap item pernyataan dalam Kuadran 1 (concentrate here), dimana pada kuadran ini item evaluasi dianggap penting oleh pelanggan, tetapi pada kenyataannya item ini belum sesuai dengan harapan pelanggan (tingkat kepuasan yang diperoleh masih rendah). Item evaluasi yang harus diperhatikan/diprioritaskan adalah sebagai berikut : ');
+			$this->excel->getActiveSheet()->mergeCells('B'.$row.':H'.$row);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->getAlignment()->setWrapText(true); 
+			$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(60);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->applyFromArray($styleArray);
+			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Mempertahankan kinerja terhadap item evaluasi dalam Kuadran 2 (keep up the good work), di mana pada kuadran ini item evaluasi dianggap penting oleh pelanggan, dan dianggap pelanggan sudah sesuai dengan yang dirasakannya sehingga tingkat kepuasannya relatif lebih tinggi. item evaluasi ini menjadikan produk atau jasa unggul di mata pelanggan. Item evaluasi yang harus dipertahankan adalah sebagai berikut :');
 			$row++;
 			foreach ($tiapkuadran[2] as $key => $value) {
 				$this->excel->getActiveSheet()->setCellValue('B'.$row, $value.'. '.$hasp['subcriteria2'][$value]['subcriteria']);
@@ -299,10 +389,13 @@ class Admin extends CI_Controller {
 			$num++;
 			$row++;
 		}
-
 		if (sizeof($tiapkuadran[3]) > 0) {
 			$this->excel->getActiveSheet()->setCellValue('A'.$row, $num);
-			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Memberikan perhatian khusus (prioritas) terhadap item pernyataan dalam Kuadran 1 (concentrate here), dimana pada kuadran ini item evaluasi dianggap penting oleh pelanggan, tetapi pada kenyataannya item ini belum sesuai dengan harapan pelanggan (tingkat kepuasan yang diperoleh masih rendah). Item evaluasi yang harus diperhatikan/diprioritaskan adalah sebagai berikut : ');
+			$this->excel->getActiveSheet()->mergeCells('B'.$row.':H'.$row);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->getAlignment()->setWrapText(true); 
+			$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(60);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->applyFromArray($styleArray);
+			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Mempertimbangkan kinerja terhadap item evaluasi dalam Kuadran 3 (low priority), di mana pada kuadran ini item evaluasi dianggap kurang penting oleh pelanggan, dan pada kenyatannya kinerjanya tidak terlalu istimewa. Peningkatan item evaluasi yang termasuk dalam kuadran ini dapat dipertimbangkan kembali karena pengaruhnya terhadap manfaat yang dirasakan oleh pelanggan sangat kecil. Item evaluasi yang harus dipertimbangkan adalah sebagai berikut :');
 			$row++;
 			foreach ($tiapkuadran[3] as $key => $value) {
 				$this->excel->getActiveSheet()->setCellValue('B'.$row, $value.'. '.$hasp['subcriteria2'][$value]['subcriteria']);
@@ -311,10 +404,13 @@ class Admin extends CI_Controller {
 			$num++;
 			$row++;
 		}
-
 		if (sizeof($tiapkuadran[4]) > 0) {
 			$this->excel->getActiveSheet()->setCellValue('A'.$row, $num);
-			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Memberikan perhatian khusus (prioritas) terhadap item pernyataan dalam Kuadran 1 (concentrate here), dimana pada kuadran ini item evaluasi dianggap penting oleh pelanggan, tetapi pada kenyataannya item ini belum sesuai dengan harapan pelanggan (tingkat kepuasan yang diperoleh masih rendah). Item evaluasi yang harus diperhatikan/diprioritaskan adalah sebagai berikut : ');
+			$this->excel->getActiveSheet()->mergeCells('B'.$row.':H'.$row);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->getAlignment()->setWrapText(true); 
+			$this->excel->getActiveSheet()->getRowDimension($row)->setRowHeight(50);
+			$this->excel->getActiveSheet()->getStyle('B'.$row)->applyFromArray($styleArray);
+			$this->excel->getActiveSheet()->setCellValue('B'.$row, 'Mengurangi (mengabaikan) kinerja terhadap item evaluasi dalam Kuadran 4 (possible overkill), di mana pada kuadran ini item evaluasi dianggap kurang penting oleh pelanggan, dan dirasakan terlalu berlebihan. Item evaluasi yang termasuk dalam kuadran ini dapat dikurangi agar perpustakaan dapat menghemat biaya. Item evaluasi yang dapat diabaikan adalah sebagai berikut :');
 			$row++;
 			foreach ($tiapkuadran[4] as $key => $value) {
 				$this->excel->getActiveSheet()->setCellValue('B'.$row, $value.'. '.$hasp['subcriteria2'][$value]['subcriteria']);
@@ -325,19 +421,113 @@ class Admin extends CI_Controller {
 		}
 		
 		//merge cell A1 until D1
+		//charts
+		$dataseriesLabels1 = array(
+			new PHPExcel_Chart_DataSeriesValues('String', 'Report!$A$4', NULL, 1), 
+		);
+		$xAxisTickValues1 = array(
+			new PHPExcel_Chart_DataSeriesValues('String','Report!$A$5:$B$5', NULL, 2),  
+		);
+		$dataSeriesValues1 = array(
+			new PHPExcel_Chart_DataSeriesValues('Number', 'Report!$A$6:$B$6', NULL, 2), 
+		);
+		$series = new PHPExcel_Chart_DataSeries(
+			PHPExcel_Chart_DataSeries::TYPE_PIECHART,       // plotType
+			NULL,  // plotGrouping
+			range(0, count($dataSeriesValues1)-1),          // plotOrder
+			$dataseriesLabels1,                   // plotLabel
+			$xAxisTickValues1,                    // plotCategory
+			$dataSeriesValues1                    // plotValues
+		);
+		$series->setPlotDirection(PHPExcel_Chart_DataSeries::DIRECTION_COL);
+		$layout = new PHPExcel_Chart_Layout();
+		$layout->setShowVal(TRUE);
+		$layout->setShowPercent(TRUE);
+		$plotarea = new PHPExcel_Chart_PlotArea($layout, array($series));
+		$xTitle = new PHPExcel_Chart_Title('xAxisLabel');
+		$yTitle = new PHPExcel_Chart_Title('yAxisLabel');
+		$title1 = new PHPExcel_Chart_Title('Jenis Kelamin');
+		$legend1 = new PHPExcel_Chart_Legend(PHPExcel_Chart_Legend::POSITION_RIGHT, NULL, false);
+		$chart = new PHPExcel_Chart('sample', $title1, $legend1, $plotarea, true,0,NULL,NULL);
+		$chart->setTopLeftPosition('A4');
+		$chart->setBottomRightPosition('E20');
+		$this->excel->getActiveSheet()->addChart($chart);
+		//chart 2
+		$dataseriesLabels1 = array(
+			new PHPExcel_Chart_DataSeriesValues('String', 'Report!$A$8', NULL, 1), 
+		);
+		$xAxisTickValues1 = array(
+			new PHPExcel_Chart_DataSeriesValues('String','Report!$A$9:$G$9', NULL, 2),  
+		);
+		$dataSeriesValues1 = array(
+			new PHPExcel_Chart_DataSeriesValues('Number', 'Report!$A$10:$G$10', NULL, 2), 
+		);
+		$series = new PHPExcel_Chart_DataSeries(
+			PHPExcel_Chart_DataSeries::TYPE_PIECHART,       // plotType
+			NULL,  // plotGrouping
+			range(0, count($dataSeriesValues1)-1),          // plotOrder
+			$dataseriesLabels1,                   // plotLabel
+			$xAxisTickValues1,                    // plotCategory
+			$dataSeriesValues1                    // plotValues
+		);
+		$series->setPlotDirection(PHPExcel_Chart_DataSeries::DIRECTION_COL);
+		$layout = new PHPExcel_Chart_Layout();
+		$layout->setShowVal(TRUE);
+		$layout->setShowPercent(TRUE);
+		$plotarea = new PHPExcel_Chart_PlotArea($layout, array($series));
+		$xTitle = new PHPExcel_Chart_Title('xAxisLabel');
+		$yTitle = new PHPExcel_Chart_Title('yAxisLabel');
+		$title1 = new PHPExcel_Chart_Title('Tingkat Pendidikan');
+		$legend1 = new PHPExcel_Chart_Legend(PHPExcel_Chart_Legend::POSITION_RIGHT, NULL, false);
+		$chart2 = new PHPExcel_Chart('sample', $title1, $legend1, $plotarea, true,0,NULL,NULL);
+		$chart2->setTopLeftPosition('E4');
+		$chart2->setBottomRightPosition('I20');
+		$this->excel->getActiveSheet()->addChart($chart2);
+		//f36
+		//O58
+		// $dataseriesLabels1 = array(
+		// 	new PHPExcel_Chart_DataSeriesValues('String', 'Report!$A$8', NULL, 1), 
+		// );
+		// $xAxisTickValues1 = array(
+		// 	new PHPExcel_Chart_DataSeriesValues('String','Report!$A$36:$A$57', NULL, 2),  
+		// );
+		// $dataSeriesValues1 = array(
+		// 	new PHPExcel_Chart_DataSeriesValues('Number', 'Report!$B$36:$B$57', NULL, 2), 
+		// );
+		// $series = new PHPExcel_Chart_DataSeries(
+		// 	PHPExcel_Chart_DataSeries::TYPE_SCATTERCHART,       // plotType
+		// 	NULL,  // plotGrouping
+		// 	range(0, count($dataSeriesValues1)-1),          // plotOrder
+		// 	$dataseriesLabels1,                   // plotLabel
+		// 	$xAxisTickValues1,                    // plotCategory
+		// 	$dataSeriesValues1                    // plotValues
+		// );
+		// $series->setPlotDirection(PHPExcel_Chart_DataSeries::DIRECTION_COL);
+		// $layout = new PHPExcel_Chart_Layout();
+		// $layout->setShowVal(TRUE);
+		// $layout->setShowPercent(TRUE);
+		// $plotarea = new PHPExcel_Chart_PlotArea($layout, array($series));
+		// $xTitle = new PHPExcel_Chart_Title('xAxisLabel');
+		// $yTitle = new PHPExcel_Chart_Title('yAxisLabel');
+		// $title1 = new PHPExcel_Chart_Title('Tingkat Pendidikan');
+		// $legend1 = new PHPExcel_Chart_Legend(PHPExcel_Chart_Legend::POSITION_RIGHT, NULL, false);
+		// $chart3 = new PHPExcel_Chart('sample', $title1, $legend1, $plotarea, true,0,NULL,NULL);
+		// $chart3->setTopLeftPosition('F36');
+		// $chart3->setBottomRightPosition('O58');
+		// $this->excel->getActiveSheet()->addChart($chart3);
 	
 		$filename='Report.xls'; //save our workbook as this file name
-		header('Content-Type: application/vnd.ms-excel'); //mime type
-		header('Content-Disposition: attachment;filename="'.$filename.'"'); //tell browser what's the file name
 		header('Cache-Control: max-age=0'); //no cache
+		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+		header('Content-Disposition: attachment;filename="'.$filename.'"'); //tell browser what's the file name
+		header('Cache-Control: max-age=0');
 		            
 		//save it to Excel5 format (excel 2003 .XLS file), change this to 'Excel2007' (and adjust the filename extension, also the header mime type)
 		//if you want to save it as .XLSX Excel 2007 format
-		$objWriter = PHPExcel_IOFactory::createWriter($this->excel, 'Excel5');  
-		//force user to download the Excel file without writing it to server's HD
+		$objWriter = PHPExcel_IOFactory::createWriter($this->excel, 'Excel2007');  
+		$objWriter->setIncludeCharts(TRUE);
 		$objWriter->save('php://output');
 	}
-
 	public function dapatkandata()
 	{
 		$result=[];
@@ -351,9 +541,7 @@ class Admin extends CI_Controller {
 		$result[0]['pendidikan_5']=0;
 		$result[0]['pendidikan_6']=0;
 		$result[0]['pendidikan_7']=0;
-
 		$result[1]=[];
-
 		$parResp=[];
 		$data_responden=$this->m_responden->getresponden($parResp);
 		$parCri=[];
@@ -362,8 +550,8 @@ class Admin extends CI_Controller {
 		$data_subcriteria = $this->m_criteria->getsubcriteria($parSubCri);
 		$paruser = [];
 		$data_user= $this->m_user->getuser($paruser);
-		$parDiskritasi=[];
-		$data_diskritasi= $this->m_diskritasi->getdiskritasi($parDiskritasi);
+		$parDiskretisasi=[];
+		$data_diskretisasi= $this->m_diskretisasi->getdiskretisasi($parDiskretisasi);
 		
 		$data_subcriteria2=[];
 		foreach ($data_subcriteria as $key => $value) {
@@ -378,7 +566,6 @@ class Admin extends CI_Controller {
 			$data_user2[$value['id_user']]=$value;
 		}
 		$data['user']=$data_user2;		
-
 		$result[0]['count']=sizeof($data_responden);
 		//get jumlah laki perempuan
 		
@@ -390,7 +577,6 @@ class Admin extends CI_Controller {
 			{
 				$result[0]['perempuan']++;
 			}
-
 			switch ($value['tingkat_pendidikan']) {
 				case 1:
 					$result[0]['pendidikan_1']++;
@@ -416,58 +602,74 @@ class Admin extends CI_Controller {
 			}	
 		}
 		return $result;
-
 	}
-
 	public function perhitungan()
 	{
 		
 		$data=$this->perhitunganpisah();
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function perhitunganpisah()
 	{
 		$data=[];
 		$view['hasil']=null;
 		$view['perhitungan']=null;
 		$view['perhitungan']['bobot']=null;
-
 		$parResp=[];
 		$data_responden=$this->m_responden->getresponden($parResp);
 		$parCri=[];
 		$data_criteria = $this->m_criteria->getcriteria($parCri);
 		$parSubCri=[];
 		$data_subcriteria = $this->m_criteria->getsubcriteria($parSubCri);
-		
-		$paruser = [];
+		$data_jawaban = $this->m_jawaban->getjawaban([]);
+		$jawaban2=[];
+		foreach ($data_responden as $key_r => $value) {
+			foreach ($data_subcriteria as $key_s => $value2) {
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][1]=null;
+				$jawaban2[$value['id_responden']][$value2['id_subcriteria']][2]=null;
+			}
+		}
+		foreach ($data_jawaban as $key => $value) {
+			$jawaban2[$value['id_responden_fk']][$value['id_subcriteria_fk']][$value['tipe']]=$value['jawaban'];
+		}
+		// echo '<pre>';
+		// print_r($jawaban2);
+		// break 1 ;
+		foreach ($data_responden as $key => $value) {
+			
+			$answers_1='';
+			$answers_2='';
+			foreach ($jawaban2[$value['id_responden']] as $keysubc => $subc) {
+				$answers_1=$answers_1.$subc[1].',';
+				$answers_2=$answers_2.$subc[2].',';
+			}
+			$data_responden[$key]['answers_1']=$answers_1;
+			$data_responden[$key]['answers_2']=$answers_2;
+		}
+		$paruser['role !='] = 1;
 		$data_user= $this->m_user->getuser($paruser);
-		$data_porsi=[];
-
+		// $data_porsi=[];
 		$data_subcriteria2=[];
 		foreach ($data_subcriteria as $key => $value) {
 			$data_subcriteria2[$value['id_subcriteria']]=$value;
 		}
-
-
 		$data['subcriteria']=$data_subcriteria;
 		$data['subcriteria2']=$data_subcriteria2;
-
 		$data_criteria2=[];
 		foreach ($data_criteria as $key => $value) {
 			$data_criteria2[$value['id_criteria']]=$value;
 		}
 		$data['criteria']=$data_criteria2;
-
 		$data_user2=[];
 		foreach ($data_user as $key => $value) {
 			$data_user2[$value['id_user']]=$value;
 		}
 		$data['user']=$data_user2;
-
 		foreach ($data_user as $key => $valueuser) {
-			$data_porsi[$valueuser['id_user']]=$valueuser['porsi_bobot'];
-			if($valueuser['porsi_bobot']!="")
+			// $data_porsi[$valueuser['id_user']]=$valueuser['porsi_bobot'];
+			// if($valueuser['porsi_bobot']!="")
+			// {
+			if($valueuser['role']!=1)
 			{
 				$parbobot['id_user_fk']=$valueuser['id_user'];
 				$data_bobot = $this->m_bobot->getbobot($parbobot);
@@ -479,7 +681,6 @@ class Admin extends CI_Controller {
 					$bobot2[$value['type']][$value['id_target_1']][$value['id_target_2']][2]=(($value['lebihpenting'] == 2) ? $value['bobot'] : 1) ;
 					
 				}
-
 				// echo '<pre>';
 				// print_r($bobot2);
 				// break 1;
@@ -507,8 +708,6 @@ class Admin extends CI_Controller {
 						$tbl_criteria[$value1['id_criteria']][$value2['id_criteria']][1]=$isi1;	
 						$tbl_criteria[$value1['id_criteria']][$value2['id_criteria']][2]=$isi2;	
 					}
-
-
 					$tbl_subcriteria[$value1['id_criteria']]=[];
 					$datasubberidcriteria=null;
 					foreach ($data_subcriteria as $key => $valuesub) {
@@ -518,7 +717,9 @@ class Admin extends CI_Controller {
 						}
 						
 					}
-
+					if (!isset($datasubberidcriteria)) {
+						$datasubberidcriteria=[];
+					}
 					foreach ($datasubberidcriteria as $key => $valu1) {
 						foreach ($datasubberidcriteria as $key => $valu2) {
 							$isi1=0;
@@ -528,24 +729,33 @@ class Admin extends CI_Controller {
 								$isi2=1;
 							}
 							else{
-								if (isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1])) {
-									$isi1=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1];
-									$isi2=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2];
+								if ((isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1]) && isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2])) || (isset($bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][2]) && isset($bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][1]))) {
+									
+									if (isset($bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1])) {
+										$isi1=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1];
+										$isi2=$bobot2[2][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2];
+									}else
+									{
+										// echo $value2['id_criteria'].' - '.$value1['id_criteria'];
+										$isi1=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][2];
+										$isi2=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][1];
+									}
 								}else
 								{
-									// echo $value2['id_criteria'].' - '.$value1['id_criteria'];
-									$isi1=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][2];
-									$isi2=$bobot2[2][$valu2['id_subcriteria']][$valu1['id_subcriteria']][1];
+									echo '<script type="text/javascript">'.
+										'alert("Terjadi Kesalahan, Pastikan Bobot telah diisi.");'
+										.'window.open("'.site_url('admin').'","_self");'
+										.'</script>';
+									break 1;
 								}
+								
 								
 							}	
 							$tbl_subcriteria[$value1['id_criteria']][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1]=$isi1;	
 							$tbl_subcriteria[$value1['id_criteria']][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2]=$isi2;	
-
 						}
 					}
 				}
-
 				
 				$bobotcriteria=[];
 				$criteria_sum=[];
@@ -553,8 +763,8 @@ class Admin extends CI_Controller {
 				$nilai_akar_3=[];
 				$sum_nilai_akar_3=0;
 				$normalisasi=[];
-
 				foreach ($tbl_criteria as $key => $value) {
+					
 					foreach ($value as $key1 => $va) {
 						$nil=0;
 						if(($va[1]=="") && ($va[2]==""))
@@ -564,14 +774,12 @@ class Admin extends CI_Controller {
 						{
 							$nil=($va[1]/$va[2]);
 						}
-
 						if (isset($criteria_sum[$key1])) {
 							$criteria_sum[$key1]=$criteria_sum[$key1]+$nil;
 						}else
 						{
 							$criteria_sum[$key1]=$nil;
 						}
-
 						if (isset($criteria_perkalian[$key])) {
 							$criteria_perkalian[$key]= $criteria_perkalian[$key]*$nil;
 						}else
@@ -581,24 +789,24 @@ class Admin extends CI_Controller {
 								
 					}
 				}
-
 				
-
 				foreach ($criteria_perkalian as $key => $value) {
 					$nilai_akar_3[$key]=pow($value, (1/sizeof($tbl_criteria)));
 					
 				}
 				$sum_nilai_akar_3=array_sum($nilai_akar_3);
-
 				foreach ($nilai_akar_3 as $key => $value) {
-					$normalisasi[$key]=$value/$sum_nilai_akar_3;
+					if (!$sum_nilai_akar_3) {
+						$sum_nilai_akar_3=0;
+					}
+					else
+					{
+						$normalisasi[$key]=$value/$sum_nilai_akar_3;
+					}
+					
 				}
-
-
 				$bobotcriteria=$normalisasi;
-
 				$view['perhitungan']['ipa']['bobot_criteria'][$valueuser['id_user']]=$bobotcriteria;
-
 				//menghitung bobot sub
 				$bobotsubcriteria=[];
 				foreach ($tbl_subcriteria as $kcri => $valpersub) {
@@ -617,14 +825,12 @@ class Admin extends CI_Controller {
 							{
 								$nil=($va[1]/$va[2]);
 							}
-
 							if (isset($criteria_sum[$key1])) {
 								$criteria_sum[$key1]=$criteria_sum[$key1]+$nil;
 							}else
 							{
 								$criteria_sum[$key1]=$nil;
 							}
-
 							if (isset($criteria_perkalian[$key])) {
 								$criteria_perkalian[$key]= $criteria_perkalian[$key]*$nil;
 							}else
@@ -634,83 +840,102 @@ class Admin extends CI_Controller {
 							
 						}
 					}
-
 					foreach ($criteria_perkalian as $key => $value) {
 						$nilai_akar_3[$key]=pow($value, (1/sizeof($valpersub)));
 						
 					}
 					$sum_nilai_akar_3=array_sum($nilai_akar_3);
-
 					foreach ($nilai_akar_3 as $key => $value) {
-						$normalisasi[$key]=$value/$sum_nilai_akar_3;
+						if($sum_nilai_akar_3)
+						{
+							$normalisasi[$key]=$value/$sum_nilai_akar_3;
+						}else
+						{
+							$normalisasi[$key]=0;
+						}
 					}
 					
 					$bobotsubcriteria[$kcri]=$normalisasi;
 				}
-
-
 				// echo '<pre>';
 				// print_r($bobotcriteria);
 				// print_r($bobotsubcriteria);
-
 				//menghitung DM
+				// print_r($bobotcriteria);
+				// print_r($bobotsubcriteria);
+				
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
 					foreach ($vcri as $key => $value) {
+						// if (!isset($bobotcriteria[$kcri])) {
+						// 	$bobotcriteria[$kcri]=0;
+						// }
+						// echo $bobotcriteria[$kcri].' x '.$value;
+						// echo '<br>';
 						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri];
+							
 					}
 				}
-
+				// break 1;
 				// echo '<pre>';
 				// print_r($bobot_dm);
 				// break 1;
-
+				// echo '<pre>';
+				// print_r($bobot_global);
+				// break 2;
 				$view['perhitungan']['ipa']['bobot_subcriteria'][$valueuser['id_user']]=$bobot_global;
 			}
 		}
 		$bobot_criteria_dm=[];
+		if (!isset($view['perhitungan']['ipa']['bobot_criteria'])) {
+			$view['perhitungan']['ipa']['bobot_criteria']=[];
+		}
 		foreach ($view['perhitungan']['ipa']['bobot_criteria'] as $kuser => $peruser) {
 			foreach ($peruser as $kcri => $bob) {
 				if (!isset($bobot_criteria_dm[$kcri])) {
 					$bobot_criteria_dm[$kcri]=0;
 				}
-				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*$data_porsi[$kuser]/100);
+				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)));
 			}
 		}
-
 		$bobot_subcriteria_dm=[];
+		if (!isset($view['perhitungan']['ipa']['bobot_subcriteria'])) {
+			$view['perhitungan']['ipa']['bobot_subcriteria']=[];
+		}
 		foreach ($view['perhitungan']['ipa']['bobot_subcriteria'] as $kuser => $peruser) {
 			foreach ($peruser as $kcri => $cri) {
 				foreach ($cri as $ksubcri => $bob) {
 					if (!isset($bobot_subcriteria_dm[$kcri][$ksubcri])) {
 						$bobot_subcriteria_dm[$kcri][$ksubcri]=0;
 					}
-					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*$data_porsi[$kuser]/100);
+					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*1/(sizeof($data_user)));
 				}
 			}
 		}
 //============================		
-
-
 		$ans_1=[];
 		$ans_2=[];
 		foreach ($data_responden as $key => $value) {
-			//echo $value['answers_1'].'<br>';
 			$exp_answers_1=explode(',', $value['answers_1']);
 			$exp_answers_2=explode(',', $value['answers_2']);
 			
-			//ans_12 empty
 			foreach ($data_subcriteria as $key => $value1) {
+				if(!isset($exp_answers_1[$key]) || !isset($exp_answers_2[$key]))
+				{
+					echo '<script type="text/javascript">'.
+					'alert("Terjadi Kesalahan, Mohon periksa kembali data isian jawaban responden");'
+					.'window.open("'.site_url('admin/responden').'","_self");'
+					.'</script>';
+					break 1;
+				}
 				$ans_1[$value['id_responden']][$value1['id_criteria_fk']][$value1['id_subcriteria']]=$exp_answers_1[$key];
 				$ans_2[$value['id_responden']][$value1['id_criteria_fk']][$value1['id_subcriteria']]=$exp_answers_2[$key];
 			}
 		}
-
 		$ans_1_jum_rata=[];
 		$ans_2_jum_rata=[];
 		$ans_1_rata_subcri_berbobot=[];
 		$ans_2_rata_subcri_berbobot=[];
-
 		foreach ($ans_1 as $key => $resp) {
 			foreach ($resp as $kc => $cri) {
 				foreach ($cri as $ksc => $sc) {
@@ -723,7 +948,7 @@ class Admin extends CI_Controller {
 					if (!isset($ans_1_jum_rata[$kc][$ksc]['berbobot'])) {
 						$ans_1_jum_rata[$kc][$ksc]['berbobot']=0;
 					}
-					$ans_1_jum_rata[$kc][$ksc]['sum']=$ans_1_jum_rata[$kc][$ksc]['sum']+$sc;
+					$ans_1_jum_rata[$kc][$ksc]['sum']+=$sc;
 					$ans_1_jum_rata[$kc][$ksc]['avg']=$ans_1_jum_rata[$kc][$ksc]['sum']/sizeof($ans_1);
 					$ans_1_jum_rata[$kc][$ksc]['berbobot']=$ans_1_jum_rata[$kc][$ksc]['avg']*$bobot_subcriteria_dm[$kc][$ksc];
 				}
@@ -737,7 +962,6 @@ class Admin extends CI_Controller {
 			}
 			$ans_1_rata_subcri_berbobot[$kc]=$sum/sizeof($cri);
 		}
-
 		foreach ($ans_2 as $key => $resp) {
 			foreach ($resp as $kc => $cri) {
 				foreach ($cri as $ksc => $sc) {
@@ -747,16 +971,15 @@ class Admin extends CI_Controller {
 					if (!isset($ans_2_jum_rata[$kc][$ksc]['avg'])) {
 						$ans_2_jum_rata[$kc][$ksc]['avg']=0;
 					}
-					if (!isset($ans_1_jum_rata[$kc][$ksc]['berbobot'])) {
+					if (!isset($ans_2_jum_rata[$kc][$ksc]['berbobot'])) {
 						$ans_2_jum_rata[$kc][$ksc]['berbobot']=0;
 					}
-					$ans_2_jum_rata[$kc][$ksc]['sum']=$ans_2_jum_rata[$kc][$ksc]['sum']+$sc;
+					$ans_2_jum_rata[$kc][$ksc]['sum']+=$sc;
 					$ans_2_jum_rata[$kc][$ksc]['avg']=$ans_2_jum_rata[$kc][$ksc]['sum']/sizeof($ans_2);
 					$ans_2_jum_rata[$kc][$ksc]['berbobot']=$ans_2_jum_rata[$kc][$ksc]['avg']*$bobot_subcriteria_dm[$kc][$ksc];
 				}
 			}
 		}
-
 		foreach ($ans_2_jum_rata as $kc => $cri) {
 			$sum=0;
 			foreach ($cri as $ksc => $sc) {
@@ -764,7 +987,6 @@ class Admin extends CI_Controller {
 			}
 			$ans_2_rata_subcri_berbobot[$kc]=$sum/sizeof($cri);
 		}
-
 		$analisisipa=[];
 		$analisisipa_total[1]=0;
 		$analisisipa_total[2]=0;
@@ -775,6 +997,11 @@ class Admin extends CI_Controller {
 				$analisisipa[$value['id_criteria_fk']][$value['id_subcriteria']][2]=0;
 			
 			}
+			if(!isset($ans_1_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot']) || !isset($ans_2_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot']))
+			{
+				$ans_1_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot']=0;
+				$ans_2_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot']=0;
+			}
 			$analisisipa[$value['id_criteria_fk']][$value['id_subcriteria']][1]=$ans_1_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot'];
 			$analisisipa[$value['id_criteria_fk']][$value['id_subcriteria']][2]=$ans_2_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot'];
 			
@@ -782,10 +1009,14 @@ class Admin extends CI_Controller {
 			$analisisipa_total[2]=$analisisipa_total[2]+$ans_2_jum_rata[$value['id_criteria_fk']][$value['id_subcriteria']]['berbobot'];
 			
 		}
-
-		$sumbu['x']=$analisisipa_total[1]/sizeof($data_subcriteria);
-		$sumbu['y']=$analisisipa_total[2]/sizeof($data_subcriteria);
-
+		$sumbu['x']=0;
+		$sumbu['y']=0;
+		if(sizeof($data_subcriteria))
+		{
+			$sumbu['x']=$analisisipa_total[1]/sizeof($data_subcriteria);
+			$sumbu['y']=$analisisipa_total[2]/sizeof($data_subcriteria);
+		}
+				
 		$kuadran=[];
 		foreach ($analisisipa as $kc => $cri) {
 			foreach ($cri as $ksc => $subc) {
@@ -815,71 +1046,71 @@ class Admin extends CI_Controller {
 				
 			}
 		}
-
 		//perhitungan libqual
-		$data_diskritasi= $this->m_diskritasi->getdiskritasi([]);
-		$data['diskritasi']=$data_diskritasi;
-
-		$diskritasi2=[];
+		$data_diskretisasi= $this->m_diskretisasi->getdiskretisasi([]);
+		$data['diskretisasi']=$data_diskretisasi;
+		$diskretisasi2=[];
 		$batas_awal=1*10;
-		foreach ($data_diskritasi as $key => $value) {
+		foreach ($data_diskretisasi as $key => $value) {
 			for ($i=$batas_awal; $i <= ($value['batas_akhir']*10); $i+=(0.5*10)) { 
-				$diskritasi2[$i]=$value;
+				$diskretisasi2[$i]=$value;
 			}
 			$batas_awal=($value['batas_akhir']*10)+(0.5*10);
 		}
-		$data['diskritasi2']=$diskritasi2;
-
-		$diskritasi3=[];
-		foreach ($data_diskritasi as $key => $value) {
-			$diskritasi3[$value['id_diskritasi']]=$value;
+		$data['diskretisasi2']=$diskretisasi2;
+		$diskretisasi3=[];
+		foreach ($data_diskretisasi as $key => $value) {
+			$diskretisasi3[$value['id_diskretisasi']]=$value;
 		}
-		$data['diskritasi3']=$diskritasi3;
+		$data['diskretisasi3']=$diskretisasi3;
 		
-
-		$jadidiskrit=[];
+		$jadidiskretisasi=[];
 		foreach ($ans_1 as $kresp => $resp) {
 			foreach ($resp as $kcri => $cri) {
 				foreach ($cri as $ksubcri => $subcri) {
-					$jadidiskrit[$kresp][$kcri][$ksubcri]= $diskritasi2[$subcri*10]['id_diskritasi'];
+					if (!isset($diskretisasi2[$subcri*10]['id_diskretisasi'])) {
+						echo '<script type="text/javascript">'.
+								'alert("Terjadi Kesalahan, Mohon periksa kembali data isian jawaban responden");'
+								.'window.open("'.site_url('admin').'","_self");'
+								.'</script>';
+								break 1;
+					}
+					$jadidiskretisasi[$kresp][$kcri][$ksubcri]= $diskretisasi2[$subcri*10]['id_diskretisasi'];
 				}
 			}
 		}
-
-		$olahdiskrit=[];
-		foreach ($jadidiskrit as $kresp => $resp) {
+		$olahdiskretisasi=[];
+		foreach ($jadidiskretisasi as $kresp => $resp) {
 			foreach ($resp as $kcri => $cri) {
 				foreach ($cri as $ksc => $subc) {
-					if(!isset($olahdiskrit[$kcri][$ksc][$subc]['count']))
+					if(!isset($olahdiskretisasi[$kcri][$ksc][$subc]['count']))
 					{
-						$olahdiskrit[$kcri][$ksc][$subc]['count']=0;
+						$olahdiskretisasi[$kcri][$ksc][$subc]['count']=0;
 					}
-					if(!isset($olahdiskrit[$kcri][$ksc][$subc]['avg']))
+					if(!isset($olahdiskretisasi[$kcri][$ksc][$subc]['avg']))
 					{
-						$olahdiskrit[$kcri][$ksc][$subc]['avg']=0;
+						$olahdiskretisasi[$kcri][$ksc][$subc]['avg']=0;
 					}
-					$olahdiskrit[$kcri][$ksc][$subc]['count']=$olahdiskrit[$kcri][$ksc][$subc]['count']+1;
-					$olahdiskrit[$kcri][$ksc][$subc]['avg']=$olahdiskrit[$kcri][$ksc][$subc]['count']/sizeof($jadidiskrit);
-					ksort($olahdiskrit[$kcri][$ksc]);
+					$olahdiskretisasi[$kcri][$ksc][$subc]['count']=$olahdiskretisasi[$kcri][$ksc][$subc]['count']+1;
+					$olahdiskretisasi[$kcri][$ksc][$subc]['avg']=$olahdiskretisasi[$kcri][$ksc][$subc]['count']/sizeof($jadidiskretisasi);
+					ksort($olahdiskretisasi[$kcri][$ksc]);
 				}
 			}
 		}
-
 		//cek apakah ad kosong
-		foreach ($olahdiskrit as $kcri => $cri) {
+		foreach ($olahdiskretisasi as $kcri => $cri) {
 			foreach ($cri as $ksc => $sc) {
-				foreach ($data_diskritasi as $key => $value) {
-					if (!isset($olahdiskrit[$kcri][$ksc][$value['id_diskritasi']])) {
-						$olahdiskrit[$kcri][$ksc][$value['id_diskritasi']]['count']=0;
-						$olahdiskrit[$kcri][$ksc][$value['id_diskritasi']]['avg']=0;
+				foreach ($data_diskretisasi as $key => $value) {
+					if (!isset($olahdiskretisasi[$kcri][$ksc][$value['id_diskretisasi']])) {
+						$olahdiskretisasi[$kcri][$ksc][$value['id_diskretisasi']]['count']=0;
+						$olahdiskretisasi[$kcri][$ksc][$value['id_diskretisasi']]['avg']=0;
 					}
-					ksort($olahdiskrit[$kcri][$ksc]);
+					ksort($olahdiskretisasi[$kcri][$ksc]);
 				}
 			}
 		}
-
 		$hitung1=[];
-		foreach ($olahdiskrit as $kcri => $cri) {
+		foreach ($olahdiskretisasi as $kcri => $cri) {
 			foreach ($cri as $ksc => $sc) {
 				foreach ($sc as $kd => $dis) {
 					$hitung1[$kcri][$ksc][$kd]=$dis['avg']*$bobot_subcriteria_dm[$kcri][$ksc];
@@ -887,7 +1118,6 @@ class Admin extends CI_Controller {
 				
 			}
 		}
-
 		$hitung1_sum=[];
 		foreach ($hitung1 as $kc => $cri) {
 			foreach ($cri as $ksc => $sc) {
@@ -899,14 +1129,12 @@ class Admin extends CI_Controller {
 				}
 			}
 		}
-
 		$hitung2=[];
 		foreach ($hitung1_sum as $kc => $cri) {
 			foreach ($cri as $kd => $dis) {
 				$hitung2[$kc][$kd]=$dis*$bobot_criteria_dm[$kc];
 			}
 		}
-
 		$hitung2_sum=[];
 		foreach ($hitung2 as $kc => $cri) {
 			foreach ($cri as $kd => $dis) {
@@ -916,16 +1144,20 @@ class Admin extends CI_Controller {
 				$hitung2_sum[$kd]=$hitung2_sum[$kd]+$dis;
 			}
 		}
-
 		$hitung2prosentase=[];
 		foreach ($hitung2_sum as $key => $value) {
-			$hitung2prosentase[$key]=$value/array_sum($hitung2_sum)*100;
+			if(array_sum($hitung2_sum))
+			{
+				$hitung2prosentase[$key]=$value/array_sum($hitung2_sum)*100;
+			}else
+			{
+				$hitung2prosentase[$key]=0;
+			}
+			
 		}
-
 		// echo '<pre>';
 		// print_r($hitung2prosentase);
 		// break 1;
-
 		$view['perhitungan']['ipa']['bobot_criteria_dm']= $bobot_criteria_dm;
 		$view['perhitungan']['ipa']['bobot_subcriteria_dm']= $bobot_subcriteria_dm;
 		$view['perhitungan']['ipa']['responden'][1]= $ans_1;
@@ -934,29 +1166,22 @@ class Admin extends CI_Controller {
 		$view['perhitungan']['ipa']['responden']['sum_jum_2']= $ans_2_jum_rata;
 		$view['perhitungan']['ipa']['responden']['rata_subcri_berbobot_1']= $ans_1_rata_subcri_berbobot;
 		$view['perhitungan']['ipa']['responden']['rata_subcri_berbobot_2']= $ans_2_rata_subcri_berbobot;
-
-
 		$view['perhitungan']['libq']['bobot_criteria']= $view['perhitungan']['ipa']['bobot_criteria'];
 		$view['perhitungan']['libq']['bobot_subcriteria']=$view['perhitungan']['ipa']['bobot_subcriteria'];
 		$view['perhitungan']['libq']['bobot_criteria_dm']= $bobot_criteria_dm;
 		$view['perhitungan']['libq']['bobot_subcriteria_dm']= $bobot_subcriteria_dm;
 		$view['perhitungan']['libq']['responden']= $ans_1;
-		$view['perhitungan']['libq']['responden_diskrit']= $jadidiskrit;
-		$view['perhitungan']['libq']['olahdiskrit']= $olahdiskrit;
+		$view['perhitungan']['libq']['responden_diskretisasi']= $jadidiskretisasi;
+		$view['perhitungan']['libq']['olahdiskretisasi']= $olahdiskretisasi;
 		$view['perhitungan']['libq']['hitung1']= $hitung1;
 		$view['perhitungan']['libq']['hitung1_sum']= $hitung1_sum;
 		$view['perhitungan']['libq']['hitung2']= $hitung2;
 		$view['perhitungan']['libq']['hitung2_sum']= $hitung2_sum;
-
-
 		$view['hasil']['ipa']['tingkatkesesuaian']= $analisisipa;
 		$view['hasil']['ipa']['tingkatkesesuaian_total']= $analisisipa_total;
 		$view['hasil']['ipa']['sumbu']= $sumbu;
 		$view['hasil']['ipa']['kuadran']= $kuadran;
-
 		$view['hasil']['libq']['prosentase']= $hitung2prosentase;
-
-
 		// echo '<pre>';
 		// print_r($ans_1_jum_rata);
 		// print_r($ans_1_rata_subcri_berbobot);
@@ -970,19 +1195,16 @@ class Admin extends CI_Controller {
 		// print_r($view['perhitungan']['bobot_dm']);
 		// print_r($view['perhitungan']);
 		// break 1;
-
 		$data['view']=$view;
 		$data['page']='Perhitungan';
 		return $data;
 	}
-
 	public function pembobotangdss()
 	{
 		$data=[];
 		$view['hasil']=null;
 		$view['perhitungan']=null;
 		$view['perhitungan']['bobot']=null;
-
 		$parResp=[];
 		$data_responden=$this->m_responden->getresponden($parResp);
 		$parCri=[];
@@ -990,34 +1212,30 @@ class Admin extends CI_Controller {
 		$parSubCri=[];
 		$data_subcriteria = $this->m_criteria->getsubcriteria($parSubCri);
 		
-		$paruser = [];
+		$paruser['role !='] = 1;
 		$data_user= $this->m_user->getuser($paruser);
-		$data_porsi=[];
-
+		// $data_porsi=[];
 		$data_subcriteria2=[];
 		foreach ($data_subcriteria as $key => $value) {
 			$data_subcriteria2[$value['id_subcriteria']]=$value;
 		}
-
-
 		$data['subcriteria']=$data_subcriteria;
 		$data['subcriteria2']=$data_subcriteria2;
-
 		$data_criteria2=[];
 		foreach ($data_criteria as $key => $value) {
 			$data_criteria2[$value['id_criteria']]=$value;
 		}
 		$data['criteria']=$data_criteria2;
-
 		$data_user2=[];
 		foreach ($data_user as $key => $value) {
 			$data_user2[$value['id_user']]=$value;
 		}
 		$data['user']=$data_user2;
-
 		foreach ($data_user as $key => $valueuser) {
-			$data_porsi[$valueuser['id_user']]=$valueuser['porsi_bobot'];
-			if($valueuser['porsi_bobot']!="")
+			// $data_porsi[$valueuser['id_user']]=$valueuser['porsi_bobot'];
+			// if($valueuser['porsi_bobot']!="")
+			// {
+			if($valueuser['role']!=1)
 			{
 				$parbobot['id_user_fk']=$valueuser['id_user'];
 				$data_bobot = $this->m_bobot->getbobot($parbobot);
@@ -1029,7 +1247,6 @@ class Admin extends CI_Controller {
 					$bobot2[$value['type']][$value['id_target_1']][$value['id_target_2']][2]=(($value['lebihpenting'] == 2) ? $value['bobot'] : 1) ;
 					
 				}
-
 				// echo '<pre>';
 				// print_r($bobot2);
 				// break 1;
@@ -1057,8 +1274,6 @@ class Admin extends CI_Controller {
 						$tbl_criteria[$value1['id_criteria']][$value2['id_criteria']][1]=$isi1;	
 						$tbl_criteria[$value1['id_criteria']][$value2['id_criteria']][2]=$isi2;	
 					}
-
-
 					$tbl_subcriteria[$value1['id_criteria']]=[];
 					$datasubberidcriteria=null;
 					foreach ($data_subcriteria as $key => $valuesub) {
@@ -1068,7 +1283,6 @@ class Admin extends CI_Controller {
 						}
 						
 					}
-
 					foreach ($datasubberidcriteria as $key => $valu1) {
 						foreach ($datasubberidcriteria as $key => $valu2) {
 							$isi1=0;
@@ -1091,11 +1305,9 @@ class Admin extends CI_Controller {
 							}	
 							$tbl_subcriteria[$value1['id_criteria']][$valu1['id_subcriteria']][$valu2['id_subcriteria']][1]=$isi1;	
 							$tbl_subcriteria[$value1['id_criteria']][$valu1['id_subcriteria']][$valu2['id_subcriteria']][2]=$isi2;	
-
 						}
 					}
 				}
-
 				
 				$bobotcriteria=[];
 				$criteria_sum=[];
@@ -1103,7 +1315,6 @@ class Admin extends CI_Controller {
 				$nilai_akar_3=[];
 				$sum_nilai_akar_3=0;
 				$normalisasi=[];
-
 				foreach ($tbl_criteria as $key => $value) {
 					foreach ($value as $key1 => $va) {
 						$nil=0;
@@ -1114,14 +1325,12 @@ class Admin extends CI_Controller {
 						{
 							$nil=($va[1]/$va[2]);
 						}
-
 						if (isset($criteria_sum[$key1])) {
 							$criteria_sum[$key1]=$criteria_sum[$key1]+$nil;
 						}else
 						{
 							$criteria_sum[$key1]=$nil;
 						}
-
 						if (isset($criteria_perkalian[$key])) {
 							$criteria_perkalian[$key]= $criteria_perkalian[$key]*$nil;
 						}else
@@ -1131,24 +1340,25 @@ class Admin extends CI_Controller {
 								
 					}
 				}
-
 				
-
 				foreach ($criteria_perkalian as $key => $value) {
 					$nilai_akar_3[$key]=pow($value, (1/sizeof($tbl_criteria)));
 					
 				}
 				$sum_nilai_akar_3=array_sum($nilai_akar_3);
-
 				foreach ($nilai_akar_3 as $key => $value) {
-					$normalisasi[$key]=$value/$sum_nilai_akar_3;
+					if($sum_nilai_akar_3)
+					{
+						$normalisasi[$key]=$value/$sum_nilai_akar_3;
+					}else
+					{
+						$normalisasi[$key]=0;	
+					}
+					
+					
 				}
-
-
 				$bobotcriteria=$normalisasi;
-
 				$view['perhitungan']['ipa']['bobot_criteria'][$valueuser['id_user']]=$bobotcriteria;
-
 				//menghitung bobot sub
 				$bobotsubcriteria=[];
 				foreach ($tbl_subcriteria as $kcri => $valpersub) {
@@ -1167,14 +1377,12 @@ class Admin extends CI_Controller {
 							{
 								$nil=($va[1]/$va[2]);
 							}
-
 							if (isset($criteria_sum[$key1])) {
 								$criteria_sum[$key1]=$criteria_sum[$key1]+$nil;
 							}else
 							{
 								$criteria_sum[$key1]=$nil;
 							}
-
 							if (isset($criteria_perkalian[$key])) {
 								$criteria_perkalian[$key]= $criteria_perkalian[$key]*$nil;
 							}else
@@ -1184,25 +1392,27 @@ class Admin extends CI_Controller {
 							
 						}
 					}
-
 					foreach ($criteria_perkalian as $key => $value) {
 						$nilai_akar_3[$key]=pow($value, (1/sizeof($valpersub)));
 						
 					}
 					$sum_nilai_akar_3=array_sum($nilai_akar_3);
-
 					foreach ($nilai_akar_3 as $key => $value) {
-						$normalisasi[$key]=$value/$sum_nilai_akar_3;
+						if($sum_nilai_akar_3)
+						{
+							$normalisasi[$key]=$value/$sum_nilai_akar_3;
+						}else
+						{
+							$normalisasi[$key]=0;
+						}
+						
 					}
 					
 					$bobotsubcriteria[$kcri]=$normalisasi;
 				}
-
-
 				// echo '<pre>';
 				// print_r($bobotcriteria);
 				// print_r($bobotsubcriteria);
-
 				//menghitung DM
 				$bobot_global=[];
 				foreach ($bobotsubcriteria as $kcri => $vcri) {
@@ -1210,32 +1420,38 @@ class Admin extends CI_Controller {
 						$bobot_global[$kcri][$key]=$value*$bobotcriteria[$kcri];
 					}
 				}
-
 				// echo '<pre>';
 				// print_r($bobot_dm);
 				// break 1;
-
 				$view['perhitungan']['ipa']['bobot_subcriteria'][$valueuser['id_user']]=$bobot_global;
 			}
 		}
 		$bobot_criteria_dm=[];
+		if (!isset($view['perhitungan']['ipa']['bobot_criteria'])) {
+			$view['perhitungan']['ipa']['bobot_criteria']=[];
+		}
+		$peembagi=1;
 		foreach ($view['perhitungan']['ipa']['bobot_criteria'] as $kuser => $peruser) {
 			foreach ($peruser as $kcri => $bob) {
 				if (!isset($bobot_criteria_dm[$kcri])) {
 					$bobot_criteria_dm[$kcri]=0;
 				}
-				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*$data_porsi[$kuser]/100);
+				//$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*$data_porsi[$kuser]/100);
+				$bobot_criteria_dm[$kcri]=$bobot_criteria_dm[$kcri]+($bob*1/(sizeof($data_user)));
 			}
 		}
-
 		$bobot_subcriteria_dm=[];
+		if (!isset($view['perhitungan']['ipa']['bobot_subcriteria'])) {
+			$view['perhitungan']['ipa']['bobot_subcriteria']=[];
+		}
 		foreach ($view['perhitungan']['ipa']['bobot_subcriteria'] as $kuser => $peruser) {
 			foreach ($peruser as $kcri => $cri) {
 				foreach ($cri as $ksubcri => $bob) {
 					if (!isset($bobot_subcriteria_dm[$kcri][$ksubcri])) {
 						$bobot_subcriteria_dm[$kcri][$ksubcri]=0;
 					}
-					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*$data_porsi[$kuser]/100);
+					//$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*$data_porsi[$kuser]/100);
+					$bobot_subcriteria_dm[$kcri][$ksubcri]=$bobot_subcriteria_dm[$kcri][$ksubcri]+($bob*1/(sizeof($data_user)));
 				}
 			}
 		}
@@ -1245,20 +1461,16 @@ class Admin extends CI_Controller {
 		// print_r($bobot_criteria_dm);
 		// print_r($bobot_subcriteria_dm);
 		// break 1;
-
 		$data['bobot_criteria']=$view['perhitungan']['ipa']['bobot_criteria'];
 		$data['bobot_subcriteria']=$view['perhitungan']['ipa']['bobot_subcriteria'];
 		$data['bobot_criteria_dm']=$bobot_criteria_dm;
 		$data['bobot_subcriteria_dm']=$bobot_subcriteria_dm;
 		$data['page']='Bobot Total GDSS-AHP';
-
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function pembobotan()
 	{
 		$data_subcriteria=$this->m_criteria->getsubcriteria([]);
-
 		if(sizeof($data_subcriteria)==0	)
 		{
 			echo "<script>
@@ -1267,25 +1479,15 @@ class Admin extends CI_Controller {
 		</script>";
 			//redirect('admin');
 		}
-		$ri[1]=0;
-		$ri[2]=0;
-		$ri[3]=0.58;
-		$ri[4]=0.9;
-		$ri[5]=1.12;
-		$ri[6]=1.24;
-		$ri[7]=1.32;
-		$ri[8]=1.41;
-		$ri[9]=1.46;
-		$ri[10]=1.49;
-
-
+		
 		$parCri=[];
 		$data_criteria = $this->m_criteria->getcriteria($parCri);
 		$parSubCri=[];
 		$data_subcriteria = $this->m_criteria->getsubcriteria($parSubCri);
 		$parbobot['id_user_fk']=$this->ses_id;
 		$data_bobot = $this->m_bobot->getbobot($parbobot);
-		
+		$pardiskretisasi=[];
+		$data_diskretisasi = $this->m_diskretisasi->getdiskretisasi($pardiskretisasi);
 	
 		////atur bobot
 		$bobot2=null;
@@ -1293,31 +1495,24 @@ class Admin extends CI_Controller {
 			$bobot2[$value['type']][$value['id_target_1']][$value['id_target_2']][1]=(($value['lebihpenting'] == 1) ? $value['bobot'] : 1) ;
 			$bobot2[$value['type']][$value['id_target_1']][$value['id_target_2']][2]=(($value['lebihpenting'] == 2) ? $value['bobot'] : 1) ;
 		}
-
-
 		$view_criteria['list']=null;
 		$view_criteria['table']=null;
 		$view_criteria['form']=null;
-
 		$view_subcriteria['list']=null;
 		$view_subcriteria['table']=null;
 		$view_subcriteria['form']=null;
-
 		$view_pembobotan[1]=null;
 		$view_pembobotan[2]=null;
-
 		///view
 		foreach ($data_criteria as $key => $value) {
 			$view_criteria['list'][$value['id_criteria']]['id_criteria']=$value['id_criteria'];
 			$view_criteria['list'][$value['id_criteria']]['criteria']=$value['criteria'];
 		}
-
 		foreach ($data_subcriteria as $key => $value) {
 			$subcriteria_a['id_subcriteria'] = $value['id_subcriteria'];
 			$subcriteria_a['subcriteria'] = $value['subcriteria'];
 			$view_subcriteria['list'][$value['id_criteria_fk']][$value['id_subcriteria']] = $subcriteria_a;
 		}
-
 		////////tbl empty
 		foreach ($data_criteria as $i => $value1) {
 			foreach ($data_criteria as $j => $value2) {
@@ -1329,7 +1524,6 @@ class Admin extends CI_Controller {
 				$view_criteria['table'][$value1['id_criteria']][$value2['id_criteria']][2]=$isi;	
 			}
 		}
-
 		foreach ($view_subcriteria['list'] as $key => $value) {
 			foreach ($data_subcriteria as $i => $value1) {
 				foreach ($data_subcriteria as $j => $value2) {
@@ -1344,7 +1538,6 @@ class Admin extends CI_Controller {
 				}
 			}
 		}
-
 		///////fill tbl
 		///criteria
 		if (isset($bobot2[1])) {
@@ -1360,8 +1553,7 @@ class Admin extends CI_Controller {
 		if (isset($bobot2[2])) {
 			foreach ($bobot2[2] as $key1 => $value) {
 				foreach ($value as $key2 => $bobo) {
-					//echo '<pre>';
-					//print_r($bobo);
+					
 					foreach ($view_subcriteria['table'] as $key => $value) {
 						if(isset($value[$key1][$key2][1]))
 						{
@@ -1374,10 +1566,8 @@ class Admin extends CI_Controller {
 				}
 			}
 		}
-
 		
 			
-
 		//form
 		///criteria
 		foreach ($view_criteria['list'] as $key1 => $value1) {
@@ -1385,7 +1575,6 @@ class Admin extends CI_Controller {
 				if (!isset($view_criteria['form'][$value1['id_criteria']][$value2['id_criteria']]) 
 					&& !isset($view_criteria['form'][$value2['id_criteria']][$value1['id_criteria']]) 
 					&& ($value1['id_criteria']!=$value2['id_criteria'])) {
-
 					
 					$atasbawah[1]=$view_criteria['table'][$value1['id_criteria']][$value2['id_criteria']][1];
 					$atasbawah[2]=$view_criteria['table'][$value1['id_criteria']][$value2['id_criteria']][2];
@@ -1395,7 +1584,6 @@ class Admin extends CI_Controller {
 				}
 			}
 		}
-
 		///subcriteria
 		foreach ($view_subcriteria['list'] as $key => $value) {
 			foreach ($value as $key1 => $value1) {
@@ -1403,28 +1591,30 @@ class Admin extends CI_Controller {
 					if (!isset($view_subcriteria['form'][$key][$value1['id_subcriteria']][$value2['id_subcriteria']]) 
 						&& !isset($view_subcriteria['form'][$key][$value2['id_subcriteria']][$value1['id_subcriteria']]) 
 						&& ($value1['id_subcriteria']!=$value2['id_subcriteria'])) {
-
 						$atasbawah[1]=$view_subcriteria['table'][$key][$value1['id_subcriteria']][$value2['id_subcriteria']][1];
 						$atasbawah[2]=$view_subcriteria['table'][$key][$value1['id_subcriteria']][$value2['id_subcriteria']][2];
-
 						$view_subcriteria['form'][$key][$value1['id_subcriteria']][$value2['id_subcriteria']]['nilai']= ($atasbawah[2]==1) ? $atasbawah[1] : $atasbawah[2] ;
 						$view_subcriteria['form'][$key][$value1['id_subcriteria']][$value2['id_subcriteria']]['lebihpenting']= ($atasbawah[2]==1) ? 1 : 2 ;
 					}
 				}
 			}
 		}
-
 		
-
 		$view_subcriteria_aturulang=[];
-
 		foreach ($view_criteria['list'] as $key => $value) {
-			$view_subcriteria_aturulang[$key]['list']=$view_subcriteria['list'][$key];
-			$view_subcriteria_aturulang[$key]['table']=$view_subcriteria['table'][$key];
-			$view_subcriteria_aturulang[$key]['form']=$view_subcriteria['form'][$key];
+			if(isset($view_subcriteria['list'][$key]) && isset($view_subcriteria['table'][$key]) && isset($view_subcriteria['form'][$key]))
+			{
+				$view_subcriteria_aturulang[$key]['list']=$view_subcriteria['list'][$key];
+				$view_subcriteria_aturulang[$key]['table']=$view_subcriteria['table'][$key];
+				$view_subcriteria_aturulang[$key]['form']=$view_subcriteria['form'][$key];
+			}else
+			{
+				$view_subcriteria_aturulang[$key]['list']=null;
+				$view_subcriteria_aturulang[$key]['table']=null;
+				$view_subcriteria_aturulang[$key]['form']=null;
+			}
+			
 		}
-
-
 		$validasi_criteria=null;
 		$criteria_sum=null;
 		$tbl_bobot_vector=null;
@@ -1433,12 +1623,10 @@ class Admin extends CI_Controller {
 		$ci=null;
 		$cr=null;
 		$konsistensi="";
-
 		$criteria_perkalian=null;
 		$nilai_akar_3=[];
 		$sum_nilai_akar_3=0;
 		$normalisasi=[];
-
 		foreach ($view_criteria['table'] as $key => $value) {
 			foreach ($value as $key1 => $va) {
 				$nil=0;
@@ -1449,14 +1637,12 @@ class Admin extends CI_Controller {
 				{
 					$nil=($va[1]/$va[2]);
 				}
-
 				if (isset($criteria_sum[$key1])) {
 					$criteria_sum[$key1]=$criteria_sum[$key1]+$nil;
 				}else
 				{
 					$criteria_sum[$key1]=$nil;
 				}
-
 				if (isset($criteria_perkalian[$key])) {
 					$criteria_perkalian[$key]= $criteria_perkalian[$key]*$nil;
 				}else
@@ -1466,92 +1652,48 @@ class Admin extends CI_Controller {
 				
 			}
 		}
-
-
 		foreach ($criteria_perkalian as $key => $value) {
 			$nilai_akar_3[$key]=pow($value, (1/sizeof($data_criteria)));
 			
 		}
 		$sum_nilai_akar_3=array_sum($nilai_akar_3);
-
 		foreach ($nilai_akar_3 as $key => $value) {
-			$normalisasi[$key]=$value/$sum_nilai_akar_3;
+			if($sum_nilai_akar_3)
+			{
+				$normalisasi[$key]=$value/$sum_nilai_akar_3;
+			}else
+			{
+				$normalisasi[$key]=0;	
+			}
+			
 		}
-
 		$lambda_max=0;
 		foreach ($normalisasi as $key => $value) {
 			$lambda_max=$lambda_max+($value*$criteria_sum[$key]);
 		}
-
-
-		// foreach ($view_criteria['table'] as $key => $value) {
-		// 	foreach ($value as $key1 => $va) {
-		// 		$nil=0;
-		// 		if(($va[1]=="") && ($va[2]==""))
-		// 		{
-		// 			$nil=0;
-		// 		}else
-		// 		{
-		// 			$nil=($va[1]/$va[2])/$criteria_sum[$key1];
-		// 		}
-
-		// 		$tbl_bobot_vector[$key][$key1] = $nil;
-		// 	}
-		// }
-
 		
-		// foreach ($tbl_bobot_vector as $key => $value) {
-		// 	foreach ($value as $key1 => $va) {
-		// 		if (isset($bobot_vector_bobot[$key])) {
-		// 			$bobot_vector_bobot[$key]=$bobot_vector_bobot[$key]+$va;
-		// 		}else
-		// 		{
-		// 			$bobot_vector_bobot[$key]=$va;
-		// 		}
-		// 	}
-		// }
-
-		// foreach ($bobot_vector_bobot as $key => $value) {
-		// 	$bobot_vector_bobot[$key]=$value/count($bobot_vector_bobot);
-		// }
-
-		// $lambda_max=0;
-		// foreach ($bobot_vector_bobot as $key => $value) {
-		// 	$nilai_lambda[$key]=$value*$criteria_sum[$key];
-		// 	$lambda_max=$lambda_max+$nilai_lambda[$key];
-		// }
-
-		// $ci=($lambda_max-sizeof($bobot_vector_bobot))/(count($bobot_vector_bobot)-1);
-		// $cr=$ci/$ri[count($bobot_vector_bobot)];
-
 		$ci=($lambda_max-sizeof($normalisasi))/(sizeof($normalisasi)-1);
+// Tabel RI
+		$ri[1]=0;
+		$ri[2]=0;
+		$ri[3]=0.58;
+		$ri[4]=0.9;
+		$ri[5]=1.12;
+		$ri[6]=1.24;
+		$ri[7]=1.32;
+		$ri[8]=1.41;
+		$ri[9]=1.46;
+		$ri[10]=1.49;
+		
 		$cr=$ci/$ri[sizeof($normalisasi)];
-
-
-		$konsistensi=(($cr<0.1) ? 'Telah Konsisten' : 'Tidak Konsisten');
-
-
-
-		// echo '<pre>';
-		// print_r($view_criteria['table']);
-		// print_r($criteria_sum);
-		// print_r($tbl_bobot_vector);
-		// print_r($bobot_vector_bobot);
-		// print_r($nilai_lambda);
-		// echo '<br>lambda max: '.$lambda_max;
-		// echo '<br>CI: '.$ci;
-		// echo '<br>CR: '.$cr;
-		// echo '<br>Konsistensi: '.$konsistensi;
-		// break 1;
-
+		$konsistensi=(($cr<=0.1) ? 'Telah Konsisten' : 'Tidak Konsisten');
+		
 		$view_criteria['konsistensi']['lambda']=$lambda_max;
 		$view_criteria['konsistensi']['ci']=$ci;
 		$view_criteria['konsistensi']['cr']=$cr;
 		$view_criteria['konsistensi']['konsisten']=$konsistensi;
-
 		$data['view_pembobotan'][1] = $normalisasi;
 		$tampung_bobot=[];
-
 		foreach ($view_subcriteria_aturulang as $keyz => $valuez) {
 			$validasi_criteria=null;
 			$criteria_sum=null;
@@ -1561,13 +1703,13 @@ class Admin extends CI_Controller {
 			$ci=null;
 			$cr=null;
 			$konsistensi="";
-
 			$criteria_perkalian=null;
 			$nilai_akar_3=[];
 			$sum_nilai_akar_3=0;
 			$normalisasi=[];
-
-
+			if (!isset($valuez['table'])) {
+				$valuez['table']=[];
+			}
 			foreach ($valuez['table'] as $key => $value) {
 				foreach ($value as $key1 => $va) {
 					$nil=0;
@@ -1578,15 +1720,12 @@ class Admin extends CI_Controller {
 					{
 						$nil=($va[1]/$va[2]);
 					}
-
-
 					if (isset($criteria_sum[$key1])) {
 						$criteria_sum[$key1]=$criteria_sum[$key1]+$nil;
 					}else
 					{
 						$criteria_sum[$key1]=$nil;
 					}
-
 					if (isset($criteria_perkalian[$key])) {
 						$criteria_perkalian[$key]= $criteria_perkalian[$key]*$nil;
 					}else
@@ -1596,28 +1735,39 @@ class Admin extends CI_Controller {
 					
 				}
 			}
-
-
+			if (!isset($criteria_perkalian)) {
+				$criteria_perkalian=[];
+			}
 			foreach ($criteria_perkalian as $key => $value) {
 				$nilai_akar_3[$key]=pow($value, (1/sizeof($valuez['table'])));
 				
 			}
 			$sum_nilai_akar_3=array_sum($nilai_akar_3);
-
 			foreach ($nilai_akar_3 as $key => $value) {
-				$normalisasi[$key]=$value/$sum_nilai_akar_3;
+				if($sum_nilai_akar_3)
+				{
+					$normalisasi[$key]=$value/$sum_nilai_akar_3;
+				}else
+				{
+					$normalisasi[$key]=0;
+				}
+				
+				
 			}
-
 			$lambda_max=0;
 			foreach ($normalisasi as $key => $value) {
 				$lambda_max=$lambda_max+($value*$criteria_sum[$key]);
 			}
-
 			$ci=($lambda_max-sizeof($normalisasi))/(sizeof($normalisasi)-1);
+			if (!isset($ri[sizeof($normalisasi)])) {
+				$ri[sizeof($normalisasi)]=0;
+			}
+			if(!$ri[sizeof($normalisasi)])
+			{
+				$ri[sizeof($normalisasi)]=1;
+			}
 			$cr=$ci/$ri[sizeof($normalisasi)];
-
-			$konsistensi=(($cr<0.1) ? 'Telah Konsisten' : 'Tidak Konsisten');
-
+			$konsistensi=(($cr<=0.1) ? 'Telah Konsisten' : 'Tidak Konsisten');
 			// echo '<pre>';
 			// print_r($view_criteria['table']);
 			// print_r($criteria_sum);
@@ -1628,41 +1778,37 @@ class Admin extends CI_Controller {
 			// echo '<br>CI: '.$ci;
 			// echo '<br>CR: '.$cr;
 			// echo '<br>Konsistensi: '.$konsistensi;
-
 			
 			$view_subcriteria_aturulang[$keyz]['konsistensi']['lambda']=$lambda_max;
 			$view_subcriteria_aturulang[$keyz]['konsistensi']['ci']=$ci;
 			$view_subcriteria_aturulang[$keyz]['konsistensi']['cr']=$cr;
 			$view_subcriteria_aturulang[$keyz]['konsistensi']['konsisten']=$konsistensi;
-
 			$tampung_bobot[$keyz]=$normalisasi;
 		}
-
 		// echo '<pre>';
 		// print_r($view_subcriteria_aturulang[1]['konsistensi']);
 		// break 1;
-
 		$data['page']='Pembobotan';
 		// $data['criteriansub']=$data_criteriaAndSub;
 		$data['criteria']=$data_criteria;
 		$data['subcriteria']=$data_subcriteria;
-
+		$data['diskretisasi']=$data_diskretisasi;
 		$data['view_criteria'] = $view_criteria;
 		$data['view_subcriteria'] = $view_subcriteria_aturulang;
 		
 		$data['view_pembobotan'][2] = $tampung_bobot;
-
+		//echo '<pre>';
+		//print_r($data['view_pembobotan']);
+		//break 1;
 		// ////////////////////////////////////////////////////////////////////
 		// echo '<pre>';
 		// // print_r($view_criteria);
-
 		// print_r($view_subcriteria);
 		// echo '<pre>';
 		// print_r($data['view_pembobotan']);
 		// break 1;
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function kriteriadansub()
 	{
 		$parCri=[];
@@ -1674,51 +1820,38 @@ class Admin extends CI_Controller {
 		$data['criteria']=$data_criteria;
 		$this->load->view('admin/base_admin',$data);
 	}
-
 	public function tambahuser()
 	{
-
-		if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']))
+		if($this->m_user->tambahuser($_POST))
 		{
-			if($this->m_user->tambahuser($_POST))
-			{
-				$this->session->set_flashdata('msg',"Tambah User successed.");
-				redirect("admin/usermanagement");
-			}
-			else
-			{
-				$this->session->set_flashdata('error',"Tambah User failed.");
-				redirect("admin/usermanagement");
-			}
-		}else
-		{
-			$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
+			$this->session->set_flashdata('msg',"Tambah User successed.");
 			redirect("admin/usermanagement");
-		}
-		
-	}
-
-	public function tambahdiskritasi()
-	{
-		if($this->m_diskritasi->tambahdiskritasi($_POST))
-		{
-			$this->session->set_flashdata('msg',"Tambah Diskritasi successed.");
-			redirect("admin/diskritasi");
 		}
 		else
 		{
-			$this->session->set_flashdata('error',"Tambah Diskritasi failed.");
-			redirect("admin/diskritasi");
+			$this->session->set_flashdata('error',"Tambah User failed.");
+			redirect("admin/usermanagement");
+		}
+	}
+	
+	public function tambahdiskretisasi()
+	{
+		if($this->m_diskretisasi->tambahdiskretisasi($_POST))
+		{
+			$this->session->set_flashdata('msg',"Tambah Diskretisasi successed.");
+			redirect("admin/diskretisasi");
+		}
+		else
+		{
+			$this->session->set_flashdata('error',"Tambah Diskretisasi failed.");
+			redirect("admin/diskretisasi");
 		}	
 	}
-
 	public function tambahsubcriteria()
 	{
 		$parresponden=[];
 		$data_responden = $this->m_responden->getresponden($parresponden);
-
 		$data_subcriteria=$this->m_criteria->getsubcriteria([]);
-
 		if((sizeof($data_subcriteria)<22) && (sizeof($data_responden)==0))
 		{
 			if($this->m_criteria->tambahsubcriteria($_POST))
@@ -1738,15 +1871,14 @@ class Admin extends CI_Controller {
 		}
 		
 	}
-
 	public function ubahuser($id_user)
 	{
 		$paruser['id_user']=$id_user;
 		$data_user= $this->m_user->getuser($paruser);
 		// echo (($_POST['porsi_bobot'])-$data_user[0]['porsi_bobot']);
 		// break 1;
-		if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']-$data_user[0]['porsi_bobot']))
-		{
+		// if($this->cekvalidasi_porsibobot($_POST['porsi_bobot']-$data_user[0]['porsi_bobot']))
+		// {
 			if($this->m_user->ubahuser($id_user,$_POST))
 			{
 				$this->session->set_flashdata('msg',"Edit User successed.");
@@ -1757,18 +1889,16 @@ class Admin extends CI_Controller {
 				$this->session->set_flashdata('error',"Edit User failed.");
 				redirect("admin/usermanagement");
 			}
-		}else
-		{
-			$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
-			redirect("admin/usermanagement");
-		}
+		// }else
+		// {
+		// 	$this->session->set_flashdata('error',"Total porsi bobot tidak boleh lebih dari 100");
+		// 	redirect("admin/usermanagement");
+		// }
 	}
-
 	public function ubahsubcriteria($id_subcriteria)
 	{
 		$parresponden=[];
 		$data_responden = $this->m_responden->getresponden($parresponden);
-
 		if((sizeof($data_responden)==0))
 		{
 			if($this->m_criteria->ubahsubcriteria($id_subcriteria,$_POST))
@@ -1789,7 +1919,6 @@ class Admin extends CI_Controller {
 		}
 		
 	}
-
 	public function hapususer($id_user)
 	{
 		$par['id_user']=$id_user;
@@ -1804,11 +1933,12 @@ class Admin extends CI_Controller {
 			redirect("admin/usermanagement");
 		}
 	}
-
 	public function hapusresponden($id_responden)
 	{
-		$par['id_responden']=$id_responden;
-		if($this->m_responden->hapusresponden($par))
+		// echo 'asdads';
+		// break 1;
+		// $par['id_responden']=$id_responden;
+		if($this->m_responden->hapusresponden_transc($id_responden))
 		{
 			$this->session->set_flashdata('msg',"Remove Responden successed.");
 			redirect("admin/responden");
@@ -1819,22 +1949,20 @@ class Admin extends CI_Controller {
 			redirect("admin/responden");
 		}
 	}
-
-	public function hapusdiskritasi($id_diskritasi)
+	public function hapusdiskretisasi($id_diskretisasi)
 	{
-		$par['id_diskritasi']=$id_diskritasi;
-		if($this->m_diskritasi->hapusdiskritasi($par))
+		$par['id_diskretisasi']=$id_diskretisasi;
+		if($this->m_diskretisasi->hapusdiskretisasi($par))
 		{
-			$this->session->set_flashdata('msg',"Hapus Diskritasi successed.");
-			redirect("admin/diskritasi");
+			$this->session->set_flashdata('msg',"Hapus Diskretisasi successed.");
+			redirect("admin/diskretisasi");
 		}
 		else
 		{
-			$this->session->set_flashdata('error',"Hapus Diskritasi failed.");
-			redirect("admin/diskritasi");
+			$this->session->set_flashdata('error',"Hapus Diskretisasi failed.");
+			redirect("admin/diskretisasi");
 		}	
 	}
-
 	//dirubah yoo
 	public function cekvalidasi_porsibobot($bobotbaru)
 	{
@@ -1852,12 +1980,10 @@ class Admin extends CI_Controller {
 			return 0;
 		}
 	}
-
 	public function hapussubcriteria($id_subcriteria)
 	{
 		$parresponden=[];
 		$data_responden = $this->m_responden->getresponden($parresponden);
-
 		if((sizeof($data_responden)==0))
 		{
 			$par['id_subcriteria']=$id_subcriteria;
@@ -1879,14 +2005,12 @@ class Admin extends CI_Controller {
 		}
 		
 	}
-
 	public function submitbobot($type,$id_kriteria)
 	{
 		// echo '<pre>';
 		// print_r($_POST);
 		// echo '</pre>';
 		// break 1;
-
 		$bobots=$_POST;
 		$id_user=$this->ses_id;
 		if($this->m_bobot->ubahbobot_transc($bobots, $id_user, $type))
@@ -1899,6 +2023,29 @@ class Admin extends CI_Controller {
 		{
 			$this->session->set_flashdata('error',"Remove Edit Bobot Kriteria failed.");
 			redirect("admin/pembobotan");
+		}
+	}
+	public function tonewtable()
+	{
+		$data_responden=$this->m_responden->getresponden([]);
+		foreach ($data_responden as $key => $value) {
+			
+			$jawaban1_exp=explode(',', $value['answers_1']);
+			$jawaban2_exp=explode(',', $value['answers_2']);
+			foreach ($jawaban1_exp as $key2 => $value2) {
+				$par_jawaban['id_responden_fk']=$value['id_responden'];
+				$par_jawaban['id_subcriteria_fk']=$key2+1;
+				$par_jawaban['tipe']=1;
+				$par_jawaban['jawaban']=$value2;
+				$this->m_jawaban->tambahjawaban($par_jawaban);
+			}
+			foreach ($jawaban2_exp as $key2 => $value2) {
+				$par_jawaban['id_responden_fk']=$value['id_responden'];
+				$par_jawaban['id_subcriteria_fk']=$key2+1;
+				$par_jawaban['tipe']=2;
+				$par_jawaban['jawaban']=$value2;
+				$this->m_jawaban->tambahjawaban($par_jawaban);
+			}
 		}
 	}
 }
